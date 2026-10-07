@@ -1,0 +1,76 @@
+plugins {
+    id 'net.fabricmc.fabric-loom'
+    id 'java-library'
+}
+
+base {
+    archivesName = "glasscraft-fabric"
+}
+
+loom {
+    mods {
+        "glasscraft" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+repositories {
+    // Modrinth maven para Jade y ModMenu (opcionales, compileOnly)
+    maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    implementation project(':core')
+    compileOnly project(':common')
+
+    // Opcionales: compilar contra ellos, nunca bundling
+    compileOnly "maven.modrinth:jade:${project.jade_version_fabric}"
+    compileOnly "maven.modrinth:modmenu:${project.modmenu_version}"
+}
+
+// Inyectar codigo common+core en el JAR fabric.
+tasks.named('compileJava', JavaCompile) {
+    source(project(':common').sourceSets.main.allSource)
+}
+tasks.named('processResources', ProcessResources) {
+    from project(':common').sourceSets.main.resources
+
+    def props = [
+        mod_id                 : project.mod_id,
+        mod_name               : project.mod_name,
+        mod_version            : project.mod_version,
+        mod_authors            : project.mod_authors,
+        mod_license            : project.mod_license,
+        mod_description        : project.mod_description,
+        minecraft_version      : project.minecraft_version,
+        minecraft_version_range: project.minecraft_version_range,
+        fabric_loader_version  : project.fabric_loader_version,
+        fabric_api_version      : project.fabric_api_version,
+        java_version           : project.java_version
+    ]
+    inputs.properties props
+    filesMatching(['fabric.mod.json', 'pack.mcmeta']) {
+        expand props
+    }
+}
+tasks.named('sourcesJar', Jar) {
+    from project(':common').sourceSets.main.allSource
+    from project(':core').sourceSets.main.allSource
+}
+tasks.named('jar', Jar) {
+    from project(':core').sourceSets.main.output
+
+    manifest {
+        attributes([
+            'Specification-Title'   : project.mod_name,
+            'Specification-Version' : project.mod_version,
+            'Implementation-Title'  : project.name,
+            'Implementation-Version': "${project.mod_version}",
+            'Implementation-Vendor' : project.mod_authors
+        ])
+    }
+}

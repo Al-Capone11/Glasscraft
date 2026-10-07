@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "${mod_name}",
+  "description": "${mod_description}",
+  "authors": ["${mod_authors}"],
+  "contact": {
+    "homepage": "https://github.com/Al-Capone11/Glasscutter",
+    "sources": "https://github.com/Al-Capone11/Glasscutter"
+  },
+  "license": "${mod_license}",
+  "icon": "assets/glasscraft/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.glasscraft.fabric.GlasscraftFabric"],
+    "client": ["com.glasscraft.fabric.GlasscraftFabricClient"],
+    "modmenu": ["com.glasscraft.fabric.compat.ModMenuCompat"]
+  },
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "minecraft": "${minecraft_version_range}",
+    "java": ">=${java_version}"
+  },
+  "suggests": {
+    "fabric-api": "*",
+    "modmenu": "*",
+    "jade": "*"
+  },
+  "mixins": [
+    "glasscraft.mixins.json"
+  ]
+}

@@ -1,0 +1,31 @@
+plugins {
+    // Aplicados con apply false aqui; cada modulo los activa.
+    id 'net.fabricmc.fabric-loom' version '1.16.3' apply false
+    id 'net.neoforged.moddev' version '2.0.147' apply false
+}
+
+allprojects {
+    group = project.mod_group
+    version = "${project.mod_version}"
+}
+
+subprojects {
+    apply plugin: 'java-library'
+
+    java {
+        toolchain.languageVersion = JavaLanguageVersion.of(project.java_version as int)
+        withSourcesJar()
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    repositories {
+        mavenCentral()
+    }
+
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+}
