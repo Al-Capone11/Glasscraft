@@ -33,6 +33,9 @@ public final class GlasscraftItems {
     public static final TagKey<net.minecraft.world.level.block.Block> GLASSCUTTER_EFFECTIVE =
         TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(Glasscraft.MOD_ID, "glasscutter_effective"));
 
+    /** Velocidad de mineria FIJA (no configurable): igual a un pico de hierro. */
+    public static final float MINING_SPEED = 6.0f;
+
     private static volatile Supplier<Item> holder = () -> null;
 
     private GlasscraftItems() {}
@@ -71,8 +74,8 @@ public final class GlasscraftItems {
         HolderSet.Named<net.minecraft.world.level.block.Block> effective =
             blocks.getOrThrow(GLASSCUTTER_EFFECTIVE);
 
-        float speed = Glasscraft.config().item.miningSpeed;   // default 6.0 = pico de hierro
-        int durability = Glasscraft.config().item.durability;  // 250 = pico de hierro
+        float speed = MINING_SPEED;                             // fijo: pico de hierro
+        int durability = Glasscraft.config().item.durability;   // 250 = pico de hierro
 
         Tool tool = new Tool(
             List.of(Tool.Rule.minesAndDrops(effective, speed)),

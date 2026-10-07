@@ -52,7 +52,6 @@ public final class ConfigIo {
                 JsonObject item = root.getAsJsonObject("item");
                 GlasscraftConfig.Item i = config.item;
                 i.durability = Math.max(1, intOf(item, "durability", i.durability));
-                i.miningSpeed = Math.max(0.5f, floatOf(item, "miningSpeed", i.miningSpeed));
                 if (item.has("repairWith") && item.get("repairWith").isJsonPrimitive()) {
                     String repairWith = item.get("repairWith").getAsString();
                     if (!repairWith.isBlank()) i.repairWith = repairWith;

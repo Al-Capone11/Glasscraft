@@ -16,13 +16,14 @@ import java.util.Map;
  *     "byMod": { "chisel": true, "rechiseled": true },
  *     "blockAllowlist": [], "blockDenylist": []
  *   },
- *   "item": { "durability": 250, "miningSpeed": 12.0, "repairWith": "c:iron_ingots" }
+ *   }, "item": { "durability": 250, "repairWith": "c:iron_ingots" }
  * }
+ * miningSpeed NO es configurable (peticion del usuario): constante 6.0 en
+ * GlasscraftItems.MINING_SPEED, igual a un pico de hierro.
  */
 public final class GlasscraftConfig {
 
     public static final int DEFAULT_DURABILITY = 250;    // pico de hierro
-    public static final float DEFAULT_MINING_SPEED = 6.0f; // pico de hierro (12.0 rompia instantaneo)
     public static final String DEFAULT_REPAIR_ITEM = "c:iron_ingots";
 
     public final Continuity continuity = new Continuity();
@@ -63,7 +64,6 @@ public final class GlasscraftConfig {
 
     public static final class Item {
         public int durability = DEFAULT_DURABILITY;
-        public float miningSpeed = DEFAULT_MINING_SPEED;
         /** Tag de item (namespace:path) aceptado como material de reparacion. */
         public String repairWith = DEFAULT_REPAIR_ITEM;
     }

@@ -12,7 +12,7 @@ logoFile="icon.png"
 description='''${mod_description}'''
 
 [[mixins]]
-config="glasscraft.mixins.json"
+config="glasscraft-neoforge.mixins.json"
 
 [[dependencies.glasscraft]]
     modId="neoforge"
