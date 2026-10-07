@@ -11,6 +11,9 @@ authors="${mod_authors}"
 logoFile="icon.png"
 description='''${mod_description}'''
 
+[[mixins]]
+config="glasscraft.mixins.json"
+
 [[dependencies.glasscraft]]
     modId="neoforge"
     type="required"
