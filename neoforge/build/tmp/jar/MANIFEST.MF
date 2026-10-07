@@ -1,7 +1,0 @@
-Manifest-Version: 1.0
-Specification-Title: Glasscraft
-Specification-Version: 0.1.0-26.2
-Implementation-Title: neoforge
-Implementation-Version: 0.1.0-26.2
-Implementation-Vendor: Al-Capone11
-
