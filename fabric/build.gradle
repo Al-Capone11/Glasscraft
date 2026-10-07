@@ -28,7 +28,7 @@ dependencies {
     compileOnly project(':common')
 
     // Opcionales: compilar contra ellos, nunca bundling
-    compileOnly "maven.modrinth:jade:${project.jade_version_fabric}"
+    compileOnly "maven.modrinth:jade:26.2.10+fabric"
     compileOnly "maven.modrinth:modmenu:${project.modmenu_version}"
 }
 

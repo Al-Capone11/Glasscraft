@@ -27,7 +27,7 @@ dependencies {
     compileOnly project(':common')
 
     // Opcional: compilar contra Jade neoforge, nunca bundling
-    compileOnly "maven.modrinth:jade:${project.jade_version_neoforge}"
+    compileOnly "maven.modrinth:jade:26.2.10+neoforge"
 }
 
 // Inyectar codigo common+core en el JAR neoforge.
