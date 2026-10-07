@@ -1,3 +1,5 @@
 {
-  "item.glasscraft.glasscutter": "Glasscutter"
+  "item.glasscraft.glasscutter": "Glasscutter",
+  "item.glasscraft.glasscutter.broken": "Broken - repair with iron in an anvil",
+  "item.glasscraft.glasscutter.repair_hint": "Harvests glass, panes, glowstone and sea lanterns safely"
 }

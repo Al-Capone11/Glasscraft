@@ -22,7 +22,7 @@ public class GlasscraftFabric implements ModInitializer {
             ConfigIo.save(configFile, Glasscraft.config()); // materializa defaults
         } catch (Exception ignored) {}
 
-        GlasscraftItems.register();
+        GlasscraftItems.registerDirect();
 
         // /glasscraft reload
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->

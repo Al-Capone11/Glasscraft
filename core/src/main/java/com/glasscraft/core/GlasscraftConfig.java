@@ -21,8 +21,8 @@ import java.util.Map;
  */
 public final class GlasscraftConfig {
 
-    public static final int DEFAULT_DURABILITY = 250;   // pico de hierro
-    public static final float DEFAULT_MINING_SPEED = 12.0f; // pico de oro
+    public static final int DEFAULT_DURABILITY = 250;    // pico de hierro
+    public static final float DEFAULT_MINING_SPEED = 6.0f; // pico de hierro (12.0 rompia instantaneo)
     public static final String DEFAULT_REPAIR_ITEM = "c:iron_ingots";
 
     public final Continuity continuity = new Continuity();

@@ -1,3 +1,5 @@
 {
-  "item.glasscraft.glasscutter": "Corta vidrios"
+  "item.glasscraft.glasscutter": "Corta vidrios",
+  "item.glasscraft.glasscutter.broken": "Roto - repara con hierro en el yunque",
+  "item.glasscraft.glasscutter.repair_hint": "Corta vidrio, paneles, piedra luminosa y prismarina sin que se pierdan"
 }

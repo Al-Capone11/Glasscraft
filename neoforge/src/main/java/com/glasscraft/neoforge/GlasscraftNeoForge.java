@@ -3,27 +3,46 @@ package com.glasscraft.neoforge;
 import com.glasscraft.common.Glasscraft;
 import com.glasscraft.common.init.GlasscraftItems;
 import com.glasscraft.core.ConfigIo;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.nio.file.Path;
 
+/**
+ * Entrypoint NeoForge. El registro de items va por DeferredRegister (patron
+ * MDK 26.2): el registro directo en el constructor @Mod crashea con
+ * "Registry is already frozen" porque el constructor corre tras el registro.
+ */
 @Mod(Glasscraft.MOD_ID)
 public class GlasscraftNeoForge {
 
-    public GlasscraftNeoForge() {
-        Path configFile = net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get().resolve("glasscraft.json");
+    private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Glasscraft.MOD_ID);
+    private static final DeferredItem<Item> GLASSCUTTER =
+        ITEMS.registerItem("glasscutter", props -> GlasscraftItems.buildForDeferred());
+
+    public GlasscraftNeoForge(IEventBus modEventBus) {
+        // Config antes de crear el item (durabilidad/velocidad vienen de ahi).
+        Path configFile = FMLPaths.CONFIGDIR.get().resolve("glasscraft.json");
         Glasscraft.setConfig(ConfigIo.load(configFile));
         try {
-            ConfigIo.save(configFile, Glasscraft.config());
+            ConfigIo.save(configFile, Glasscraft.config()); // materializa defaults
         } catch (Exception ignored) {}
 
-        GlasscraftItems.register();
+        // DeferredRegister hace el registro en el momento correcto del ciclo FML.
+        ITEMS.register(modEventBus);
+
+        // Puente para que el codigo comun (mixins, Jade) encuentre el item.
+        GlasscraftItems.bind(GLASSCUTTER::get);
+
         NeoForge.EVENT_BUS.register(this);
     }
 
