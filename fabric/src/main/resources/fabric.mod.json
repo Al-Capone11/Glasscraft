@@ -15,7 +15,8 @@
   "entrypoints": {
     "main": ["com.glasscraft.fabric.GlasscraftFabric"],
     "client": ["com.glasscraft.fabric.GlasscraftFabricClient"],
-    "modmenu": ["com.glasscraft.fabric.compat.ModMenuCompat"]
+    "modmenu": ["com.glasscraft.fabric.compat.ModMenuCompat"],
+    "jade": ["com.glasscraft.fabric.compat.JadeCompat"]
   },
   "depends": {
     "fabricloader": ">=${fabric_loader_version}",
