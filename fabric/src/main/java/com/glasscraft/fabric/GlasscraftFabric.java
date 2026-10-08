@@ -12,6 +12,8 @@ import java.nio.file.Path;
 
 public class GlasscraftFabric implements ModInitializer {
 
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("Glasscraft");
+
     @Override
     public void onInitialize() {
         // Cargar config ANTES de registrar (durabilidad/velocidad vienen de ahi).
@@ -23,6 +25,15 @@ public class GlasscraftFabric implements ModInitializer {
         } catch (Exception ignored) {}
 
         GlasscraftItems.registerDirect();
+
+        // Puente de guardado para la pantalla de config (ModMenu).
+        com.glasscraft.common.client.GlasscraftConfigScreenHost.init(configFile, path -> {
+            try {
+                ConfigIo.save(path, Glasscraft.config());
+            } catch (Exception e) {
+                LOGGER.error("No se pudo guardar la config de Glasscraft", e);
+            }
+        });
 
         // /glasscraft reload
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->

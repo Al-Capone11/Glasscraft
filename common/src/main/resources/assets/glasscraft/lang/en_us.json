@@ -1,5 +1,14 @@
 {
   "item.glasscraft.glasscutter": "Glasscutter",
   "item.glasscraft.glasscutter.broken": "Broken - repair with iron in an anvil",
-  "item.glasscraft.glasscutter.repair_hint": "Harvests glass, panes, glowstone and sea lanterns safely"
+  "item.glasscraft.glasscutter.repair_hint": "Harvests glass, panes, glowstone and sea lanterns safely",
+  "glasscraft.config.title": "Glasscraft Settings",
+  "glasscraft.config.continuity_enabled": "Connected textures",
+  "glasscraft.config.vanilla_glass": "Vanilla glass",
+  "glasscraft.config.glass_panes": "Glass panes",
+  "glasscraft.config.tinted_glass": "Tinted glass",
+  "glasscraft.config.glowstone": "Glowstone",
+  "glasscraft.config.sea_lantern": "Sea lantern",
+  "glasscraft.config.prismarine": "Prismarine",
+  "glasscraft.config.durability": "Glasscutter durability: %s"
 }
