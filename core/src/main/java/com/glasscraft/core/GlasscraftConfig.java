@@ -12,7 +12,7 @@ import java.util.Map;
  *   "continuity": {
  *     "enabled": true,
  *     "vanillaGlass": true, "glassPanes": true, "tintedGlass": true,
- *     "glowstone": true, "seaLantern": true, "prismarine": true,
+ *     "glowstone": true, "seaLantern": true,
  *     "byMod": { "chisel": true, "rechiseled": true },
  *     "blockAllowlist": [], "blockDenylist": []
  *   },
@@ -23,7 +23,7 @@ import java.util.Map;
  */
 public final class GlasscraftConfig {
 
-    public static final int DEFAULT_DURABILITY = 250;    // pico de hierro
+    public static final int DEFAULT_DURABILITY = 250;    // pico de hierro (FIJO)
     public static final String DEFAULT_REPAIR_ITEM = "c:iron_ingots";
 
     public final Continuity continuity = new Continuity();
@@ -36,7 +36,6 @@ public final class GlasscraftConfig {
         public boolean tintedGlass = true;
         public boolean glowstone = true;
         public boolean seaLantern = true;
-        public boolean prismarine = true;
         /** Continuidad por mod (id de mod -> activada). Mods no listados usan 'enabled' global. */
         public final Map<String, Boolean> byMod = new LinkedHashMap<>();
         /** Bloques concretos que SIEMPRE reciben continuidad (namespace:path). */
@@ -63,7 +62,6 @@ public final class GlasscraftConfig {
     }
 
     public static final class Item {
-        public int durability = DEFAULT_DURABILITY;
         /** Tag de item (namespace:path) aceptado como material de reparacion. */
         public String repairWith = DEFAULT_REPAIR_ITEM;
     }

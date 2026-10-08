@@ -8,7 +8,5 @@
   "glasscraft.config.glass_panes": "Paneles de vidrio",
   "glasscraft.config.tinted_glass": "Vidrio tintado",
   "glasscraft.config.glowstone": "Piedra luminosa",
-  "glasscraft.config.sea_lantern": "Lampara marina",
-  "glasscraft.config.prismarine": "Prismarina",
-  "glasscraft.config.durability": "Durabilidad del corta vidrios: %s"
+  "glasscraft.config.sea_lantern": "Lampara marina"
 }

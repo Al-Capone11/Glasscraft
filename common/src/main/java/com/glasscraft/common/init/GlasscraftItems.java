@@ -36,6 +36,9 @@ public final class GlasscraftItems {
     /** Velocidad de mineria FIJA (no configurable): igual a un pico de hierro. */
     public static final float MINING_SPEED = 6.0f;
 
+    /** Durabilidad FIJA (no configurable): igual a un pico de hierro. */
+    public static final int DURABILITY = 250;
+
     private static volatile Supplier<Item> holder = () -> null;
 
     private GlasscraftItems() {}
@@ -74,8 +77,8 @@ public final class GlasscraftItems {
         HolderSet.Named<net.minecraft.world.level.block.Block> effective =
             blocks.getOrThrow(GLASSCUTTER_EFFECTIVE);
 
-        float speed = MINING_SPEED;                             // fijo: pico de hierro
-        int durability = Glasscraft.config().item.durability;   // 250 = pico de hierro
+        float speed = MINING_SPEED;      // fijo: pico de hierro
+        int durability = DURABILITY;      // fijo: pico de hierro
 
         Tool tool = new Tool(
             List.of(Tool.Rule.minesAndDrops(effective, speed)),

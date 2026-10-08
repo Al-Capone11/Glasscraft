@@ -19,9 +19,6 @@
     "minecraft:red_stained_glass_pane",
     "minecraft:black_stained_glass_pane",
     "minecraft:glowstone",
-    "minecraft:sea_lantern",
-    "minecraft:prismarine",
-    "minecraft:prismarine_bricks",
-    "minecraft:dark_prismarine"
+    "minecraft:sea_lantern"
   ]
 }

@@ -45,34 +45,10 @@ public class GlasscraftConfigScreen extends Screen {
             y += ROW;
         }
 
-        // Durabilidad (slider 1..1000)
-        this.addRenderableWidget(new AbstractSliderButton(x, y, BUTTON_W, AbstractSliderButton.DEFAULT_HEIGHT,
-                durabilityLabel(), durabilitySlider()) {
-            @Override
-            protected void updateMessage() {
-                setMessage(durabilityLabel());
-            }
-
-            @Override
-            protected void applyValue() {
-                Glasscraft.config().item.durability = Math.max(1, (int) Math.round(this.value * 1000));
-                this.setMessage(durabilityLabel());
-            }
-        });
-        y += ROW + 8;
-
+        y += 8;
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> onClose())
             .bounds(x, y, BUTTON_W, BUTTON_H)
             .build());
-    }
-
-    private double durabilitySlider() {
-        return Math.min(1.0, Glasscraft.config().item.durability / 1000.0);
-    }
-
-    private Component durabilityLabel() {
-        return Component.translatable("glasscraft.config.durability",
-            Glasscraft.config().item.durability);
     }
 
     @Override
@@ -118,9 +94,6 @@ public class GlasscraftConfigScreen extends Screen {
         def("glasscraft.config.sea_lantern",
             () -> Glasscraft.config().continuity.seaLantern,
             v -> Glasscraft.config().continuity.seaLantern = v),
-        def("glasscraft.config.prismarine",
-            () -> Glasscraft.config().continuity.prismarine,
-            v -> Glasscraft.config().continuity.prismarine = v),
     };
 
     private static ToggleDef def(String key, java.util.function.Supplier<Boolean> getter,

@@ -40,7 +40,6 @@ public final class ConfigIo {
                 c.tintedGlass = bool(cont, "tintedGlass", c.tintedGlass);
                 c.glowstone = bool(cont, "glowstone", c.glowstone);
                 c.seaLantern = bool(cont, "seaLantern", c.seaLantern);
-                c.prismarine = bool(cont, "prismarine", c.prismarine);
                 strings(cont, "blockAllowlist").forEach(c.blockAllowlist::add);
                 strings(cont, "blockDenylist").forEach(c.blockDenylist::add);
                 if (cont.has("byMod") && cont.get("byMod").isJsonObject()) {
@@ -51,7 +50,6 @@ public final class ConfigIo {
             if (root.has("item")) {
                 JsonObject item = root.getAsJsonObject("item");
                 GlasscraftConfig.Item i = config.item;
-                i.durability = Math.max(1, intOf(item, "durability", i.durability));
                 if (item.has("repairWith") && item.get("repairWith").isJsonPrimitive()) {
                     String repairWith = item.get("repairWith").getAsString();
                     if (!repairWith.isBlank()) i.repairWith = repairWith;
