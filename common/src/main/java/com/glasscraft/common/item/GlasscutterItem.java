@@ -29,6 +29,21 @@ public class GlasscutterItem extends Item {
         return super.getDestroySpeed(stack, state);
     }
 
+    /**
+     * La barra vanilla (round(13 - damage*13/max), verificado en bytecode)
+     * llega a 0 px con ~4% de durabilidad restante: con 250 son ~9 usos en
+     * los que la barra ya se ve vacia pero el item aun funciona. Alineamos
+     * lo visual con lo funcional: minimo 1 px mientras sea usable, 0 solo
+     * cuando isBroken().
+     */
+    @Override
+    public int getBarWidth(ItemStack stack) {
+        if (stack.isBroken()) {
+            return 0;
+        }
+        return Math.max(1, super.getBarWidth(stack));
+    }
+
     @Override
     public boolean isCorrectToolForDrops(ItemStack stack, net.minecraft.world.level.block.state.BlockState state) {
         if (stack.isBroken()) {
