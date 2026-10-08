@@ -85,7 +85,10 @@ public class GlasscraftConfigScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.extractBackground(guiGraphics, mouseX, mouseY, partialTick);
+        // OJO: extractRenderStateWithTooltipAndSubtitles (el que invoca el motor)
+        // YA dibuja el fondo (extractBackground -> blur) ANTES de llamar aqui.
+        // Volver a llamarlo dispara "Can only blur once per frame" (crash
+        // verificado en ambos loaders). Solo dibujamos el titulo encima.
         guiGraphics.centeredText(this.font, this.title, this.width / 2, 24, 0xFFFFFF);
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
     }
