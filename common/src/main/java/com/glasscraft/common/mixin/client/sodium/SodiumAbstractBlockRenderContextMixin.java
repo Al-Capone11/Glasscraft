@@ -20,12 +20,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * CTM para el pipeline de terreno de Sodium 0.9.x.
  *
- * SIN ASUNCIONES de convencion UV: el eje mundial de U y V se DERIVA del
- * propio quad (delta 3D entre vertices de distinta u / v), y los bordes se
- * identifican comparando la posicion del vertice contra el centro del quad
- * en ese eje. Funciona igual para cubos y paneles con cualquier rotacion.
+ * Regla central (arregla triángulos y caras equivocadas): SOLO se contrae el
+ * UV de un borde si el quad ACTUALMENTE MUESTRA ese borde del tile del sprite.
+ * Los cantos superiores de los brazos del panel y las puntas 'noside'
+ * muestrean zonas interiores del tile (p.ej. [7..9]x[0..7] de
+ * glass_pane_top): contraerlos saca el muestreo del area pintada ->
+ * triangulos transparentes. La superficie de los brazos ([9..16]x[0..16])
+ * SI toca el borde del tile: es la junta real entre paneles.
  *
- * Posiciones 0..1 (26.2 normaliza, verificado FaceBakery.bakeVertex div(16)).
+ * Convencion UV<->mundo DERIVADA del propio quad (no asumida): el vertice
+ * de max-U/max-V define el signo de los ejes tangentes.
+ * Posiciones 0..1 (FaceBakery.bakeVertex div(16), verificado).
  */
 @Mixin(net.caffeinemc.mods.sodium.client.render.model.AbstractBlockRenderContext.class)
 abstract class SodiumAbstractBlockRenderContextMixin {
@@ -59,28 +64,14 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         glasscraft$shrinkQuad(quad, face, mask);
     }
 
-    /**
-     * Contrae 1/16 del tile en cada borde conectado, derivando la
-     * correspondencia UV<->mundo del propio quad:
-     * 1) centro del quad (media de posiciones).
-     * 2) para cada vertice, vector centro->vertice.
-     * 3) U mundial: promedio de (pos_j - pos_i) * sign(u_j - u_i) para pares
-     *    con |du| apreciable — un vector que apunta hacia "+U".
-     * 4) V mundial: igual con v.
-     * 5) para cada vecino conectado (dir), el borde que lo mira son los
-     *    vertices cuyo (vertice-centro)·dir > 0; contraer su UV 1/16 hacia
-     *    el interior: u -= su * dot(uAxis, dir) ... mas simple: contraer el
-     *    COMPONENTE de UV alineado con dir.
-     */
     private void glasscraft$shrinkQuad(MutableQuadViewImpl quad, Direction face, int mask) {
-        // ejes tangentes de la cara
+        // ejes tangentes canonicos, signos corregidos con los datos del quad
         Direction uDir, vDir;
         switch (face.getAxis()) {
             case X -> { uDir = Direction.SOUTH; vDir = Direction.UP; }
             case Y -> { uDir = Direction.EAST; vDir = Direction.SOUTH; }
             default -> { uDir = Direction.EAST; vDir = Direction.UP; }
         }
-        // Ajustar signos derivando del quad: comparar UV vs posicion.
         float[] u = new float[4], v = new float[4];
         Vector3f[] p = new Vector3f[4];
         Vector3f center = new Vector3f();
@@ -90,54 +81,56 @@ abstract class SodiumAbstractBlockRenderContextMixin {
             p[i] = new Vector3f(quad.getX(i), quad.getY(i), quad.getZ(i));
             center.add(p[i]);
         }
-        center.mul(1.0f / 4.0f);
+        center.mul(0.25f);
 
-        // derivar signo/mapeo de uDir: el vertice con mayor U deberia estar
-        // del lado de la cara apuntado por +uDir. Verificar con un par.
-        // Calcular componente pos en uDir para el vertice de mayor u y menor u.
-        int iMaxU = 0, iMinU = 0;
+        int iMaxU = 0, iMinU = 0, iMaxV = 0, iMinV = 0;
         for (int i = 1; i < 4; i++) {
             if (u[i] > u[iMaxU]) iMaxU = i;
             if (u[i] < u[iMinU]) iMinU = i;
-        }
-        Vector3f du = new Vector3f(p[iMaxU]).sub(p[iMinU]);
-        // si el vertice con max U esta en direccion +uDir del mundo, du·uVec > 0
-        Vector3f uVec = new Vector3f(uDir.step());
-        if (du.dot(uVec) < 0) uDir = uDir.getOpposite();
-        // igual para V
-        int iMaxV = 0, iMinV = 0;
-        for (int i = 1; i < 4; i++) {
             if (v[i] > v[iMaxV]) iMaxV = i;
             if (v[i] < v[iMinV]) iMinV = i;
         }
+        Vector3f du = new Vector3f(p[iMaxU]).sub(p[iMinU]);
+        if (du.dot(new Vector3f(uDir.step())) < 0) uDir = uDir.getOpposite();
         Vector3f dv = new Vector3f(p[iMaxV]).sub(p[iMinV]);
-        Vector3f vVec = new Vector3f(vDir.step());
-        if (dv.dot(vVec) < 0) vDir = vDir.getOpposite();
+        if (dv.dot(new Vector3f(vDir.step())) < 0) vDir = vDir.getOpposite();
 
         TextureAtlasSprite sprite = quad.cachedSprite();
         if (sprite == null) return;
         float su = (sprite.getU1() - sprite.getU0()) / 16.0f;
         float sv = (sprite.getV1() - sprite.getV0()) / 16.0f;
 
+        // REGLA TILE-BORDE: el quad solo puede contraer un lado si su UV
+        // bbox toca ese borde del tile. ej. brazo de panel: [9..16]x[0..16]
+        // toca u1 y v0/v1 -> solo esos lados son contraibles.
+        float quMin = Math.min(Math.min(u[0], u[1]), Math.min(u[2], u[3]));
+        float quMax = Math.max(Math.max(u[0], u[1]), Math.max(u[2], u[3]));
+        float qvMin = Math.min(Math.min(v[0], v[1]), Math.min(v[2], v[3]));
+        float qvMax = Math.max(Math.max(v[0], v[1]), Math.max(v[2], v[3]));
+        float u0 = sprite.getU0(), u1 = sprite.getU1();
+        float v0 = sprite.getV0(), v1 = sprite.getV1();
+        boolean quadAtU0 = quMin < u0 + su;   // toca borde izquierdo del tile
+        boolean quadAtU1 = quMax > u1 - su;  // borde derecho
+        boolean quadAtV0 = qvMin < v0 + sv;  // borde superior
+        boolean quadAtV1 = qvMax > v1 - sv;  // borde inferior
+
         boolean changed = false;
         for (int i = 0; i < 4; i++) {
             Vector3f rel = new Vector3f(p[i]).sub(center);
             float nu = u[i], nv = v[i];
             boolean thisChanged = false;
-            // vecinos conectados en el plano de la cara (todos menos la normal)
             for (Direction d : Direction.values()) {
-                if (d.getAxis() == face.getAxis()) continue;
+                if (d.getAxis() == face.getAxis()) continue; // no vecinos de la normal
                 if ((mask & (1 << d.ordinal())) == 0) continue;
-                boolean onEdge = rel.dot(new Vector3f(d.step())) > 0;
-                if (!onEdge) continue;
-                // este vertice esta en el borde que mira a d: contraer su UV
-                // en el eje UV alineado con d.
+                if (rel.dot(new Vector3f(d.step())) <= 0) continue; // vertice no esta en ese borde
                 if (d.getAxis() == uDir.getAxis()) {
-                    nu += (d == uDir) ? -su : su;
+                    // contraer U: solo si el quad muestra ese borde del tile
+                    if (d == uDir && quadAtU1) { nu = u[i] - su; thisChanged = true; }
+                    else if (d != uDir && quadAtU0) { nu = u[i] + su; thisChanged = true; }
                 } else {
-                    nv += (d == vDir) ? -sv : sv;
+                    if (d == vDir && quadAtV1) { nv = v[i] - sv; thisChanged = true; }
+                    else if (d != vDir && quadAtV0) { nv = v[i] + sv; thisChanged = true; }
                 }
-                thisChanged = true;
             }
             if (thisChanged) {
                 quad.setUV(i, nu, nv);
