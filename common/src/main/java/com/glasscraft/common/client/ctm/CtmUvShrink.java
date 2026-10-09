@@ -78,6 +78,11 @@ public final class CtmUvShrink {
         return d != null && (mask & (1 << d.ordinal())) != 0;
     }
 
+    /** Publico para el hook de Sodium: ¿la mascara conecta en esa direccion? */
+    public static boolean connects(int mask, Direction d) {
+        return connectsDir(mask, d);
+    }
+
     /** Vecino 'arriba' en el plano de la cara (para contraer V-top). */
     private static Direction upOf(Direction face) {
         return switch (face) {

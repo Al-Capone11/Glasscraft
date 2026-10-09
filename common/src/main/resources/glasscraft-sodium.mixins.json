@@ -1,0 +1,15 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.glasscraft.common.mixin.client.sodium",
+  "compatibilityLevel": "JAVA_25",
+  "refmap": "glasscraft-sodium.refmap.json",
+  "plugin": "com.glasscraft.common.mixin.client.sodium.GlasscraftSodiumMixinPlugin",
+  "mixins": [],
+  "client": [
+    "SodiumAbstractBlockRenderContextMixin"
+  ],
+  "injectors": {
+    "defaultInjectorRequireValue": 1
+  }
+}

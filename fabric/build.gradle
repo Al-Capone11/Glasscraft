@@ -18,6 +18,9 @@ loom {
 repositories {
     // Modrinth maven para Jade y ModMenu (opcionales, compileOnly)
     maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' }
+    // Sodium classes (mismo maven local flat que common — fabric/neoforge
+    // recompilan las fuentes de common en su propio source set)
+    flatDir { name = 'LocalMods'; dirs '../common/libs' }
 }
 
 dependencies {
@@ -30,6 +33,8 @@ dependencies {
     // Opcionales: compilar contra ellos, nunca bundling
     compileOnly "maven.modrinth:jade:26.2.10+fabric"
     compileOnly "maven.modrinth:modmenu:${project.modmenu_version}"
+    // Sodium classes para el hook CTM (el source de common se recompila aqui)
+    compileOnly ':sodium-api-classes@jar'
 }
 
 // Inyectar codigo common+core en el JAR fabric.

@@ -7,3 +7,4 @@ run/
 eclipse/
 bin/
 *.iml
+common/libs/

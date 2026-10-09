@@ -29,6 +29,7 @@
     "jade": "*"
   },
   "mixins": [
-    "glasscraft.mixins.json"
+    "glasscraft.mixins.json",
+    "glasscraft-sodium.mixins.json"
   ]
 }

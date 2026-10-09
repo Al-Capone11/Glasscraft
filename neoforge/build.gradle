@@ -20,6 +20,8 @@ neoForge {
 repositories {
     // Modrinth maven para Jade (opcional, compileOnly)
     maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' }
+    // Sodium classes (mismo maven local flat que common)
+    flatDir { name = 'LocalMods'; dirs '../common/libs' }
 }
 
 dependencies {
@@ -28,6 +30,8 @@ dependencies {
 
     // Opcional: compilar contra Jade neoforge, nunca bundling
     compileOnly "maven.modrinth:jade:26.2.10+neoforge"
+    // Sodium classes para el hook CTM (el source de common se recompila aqui)
+    compileOnly ':sodium-api-classes@jar'
 }
 
 // Inyectar codigo common+core en el JAR neoforge.

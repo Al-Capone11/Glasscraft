@@ -1,6 +1,7 @@
 package com.glasscraft.common.mixin.client;
 
 import com.glasscraft.common.client.ctm.CtmContext;
+import com.glasscraft.common.client.ctm.CtmDebug;
 import com.glasscraft.common.client.ctm.CtmResolver;
 import com.glasscraft.common.client.ctm.CtmUvShrink;
 import net.minecraft.client.renderer.block.BlockQuadOutput;
@@ -20,9 +21,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *    de este bloque; TAIL siempre limpia.
  * 2) putQuadWithTint: sustituye el BakedQuad por la version con UVs
  *    contraidas si la cara conecta con un vecino identico.
- *
- * Coste: cuando la config desactiva la continuidad o el bloque no
- * participa, solo un isEnabled() por bloque (cache de registry holder).
  */
 @Mixin(ModelBlockRenderer.class)
 abstract class ModelBlockRendererMixin {
@@ -34,6 +32,7 @@ abstract class ModelBlockRendererMixin {
                                         net.minecraft.world.level.block.state.BlockState state,
                                         net.minecraft.client.renderer.block.dispatch.BlockStateModel model,
                                         long seed, CallbackInfo ci) {
+        CtmDebug.beginCalls++;
         if (state.isAir()) return;
         // OJO: NO filtrar por canOcclude() — el vidrio NO occlude (es
         // translucido) y quedaba excluido exactamente el material del CTM.
@@ -41,11 +40,13 @@ abstract class ModelBlockRendererMixin {
         // de mods con formas no-cubo quedan fuera por su propio tag/config.
         if (CtmResolver.isVanillaPane(state)) return;
         if (!CtmResolver.isEnabled(state)) return;
+        CtmDebug.activeBlocks++;
         CtmContext ctx = CtmContext.get();
         ctx.level = level;
         ctx.pos = pos;
         ctx.state = state;
         ctx.connectionMask = -1;
+        CtmDebug.sample("begin");
     }
 
     @Inject(method = "tesselateBlock", at = @At("TAIL"))
@@ -60,11 +61,15 @@ abstract class ModelBlockRendererMixin {
 
     @ModifyVariable(method = "putQuadWithTint", at = @At("HEAD"), ordinal = 0, argsOnly = true)
     private BakedQuad glasscraft$shrinkQuad(BakedQuad quad) {
+        CtmDebug.quadsTotal++;
         CtmContext ctx = CtmContext.get();
         if (ctx.state == null) return quad;
         if (quad.direction() == null) return quad; // quads internos/postes
         int mask = ctx.mask();
         if (mask == 0) return quad;
-        return CtmUvShrink.shrinkIfConnected(quad, quad.direction(), mask);
+        BakedQuad shrunk = CtmUvShrink.shrinkIfConnected(quad, quad.direction(), mask);
+        if (shrunk != quad) CtmDebug.quadsModified++;
+        CtmDebug.sample("quad");
+        return shrunk;
     }
 }
