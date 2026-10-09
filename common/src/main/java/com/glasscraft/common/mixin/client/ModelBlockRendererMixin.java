@@ -14,13 +14,10 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * F3 CTM: dos inyecciones en ModelBlockRenderer (firmas verificadas javap).
- *
- * 1) tesselateBlock HEAD: si el estado participa (config + tipo/mod),
- *    publica pos+level+state en CtmContext (thread-local) para los quads
- *    de este bloque; TAIL siempre limpia.
- * 2) putQuadWithTint: sustituye el BakedQuad por la version con UVs
- *    contraidas si la cara conecta con un vecino identico.
+ * F3 CTM — anclaje VANILLA (sin Sodium): tesselateBlock publica pos+level+state
+ * via thread-local; putQuadWithTint reempaqueta el BakedQuad con UVs contraidas.
+ * Con Sodium presente, el terreno va por el hook de Sodium; este cubre items,
+ * bloques especiales y cualquier uso del ModelBlockRenderer vanilla.
  */
 @Mixin(ModelBlockRenderer.class)
 abstract class ModelBlockRendererMixin {
@@ -32,21 +29,16 @@ abstract class ModelBlockRendererMixin {
                                         net.minecraft.world.level.block.state.BlockState state,
                                         net.minecraft.client.renderer.block.dispatch.BlockStateModel model,
                                         long seed, CallbackInfo ci) {
-        CtmDebug.beginCalls++;
         if (state.isAir()) return;
-        // OJO: NO filtrar por canOcclude() — el vidrio NO occlude (es
-        // translucido) y quedaba excluido exactamente el material del CTM.
-        // En su lugar excluye paneles (sub-tile UVs) por path vanilla; los
-        // de mods con formas no-cubo quedan fuera por su propio tag/config.
+        // Paneles vanilla fuera del path vanilla (UVs sub-tile; el hook de
+        // Sodium con shrink proporcional si los cubre).
         if (CtmResolver.isVanillaPane(state)) return;
         if (!CtmResolver.isEnabled(state)) return;
-        CtmDebug.activeBlocks++;
         CtmContext ctx = CtmContext.get();
         ctx.level = level;
         ctx.pos = pos;
         ctx.state = state;
         ctx.connectionMask = -1;
-        CtmDebug.sample("begin");
     }
 
     @Inject(method = "tesselateBlock", at = @At("TAIL"))
@@ -61,15 +53,14 @@ abstract class ModelBlockRendererMixin {
 
     @ModifyVariable(method = "putQuadWithTint", at = @At("HEAD"), ordinal = 0, argsOnly = true)
     private BakedQuad glasscraft$shrinkQuad(BakedQuad quad) {
-        CtmDebug.quadsTotal++;
         CtmContext ctx = CtmContext.get();
         if (ctx.state == null) return quad;
         if (quad.direction() == null) return quad; // quads internos/postes
         int mask = ctx.mask();
         if (mask == 0) return quad;
+        CtmDebug.quadsTotal.incrementAndGet();
         BakedQuad shrunk = CtmUvShrink.shrinkIfConnected(quad, quad.direction(), mask);
-        if (shrunk != quad) CtmDebug.quadsModified++;
-        CtmDebug.sample("quad");
+        if (shrunk != quad) CtmDebug.quadsModified.incrementAndGet();
         return shrunk;
     }
 }

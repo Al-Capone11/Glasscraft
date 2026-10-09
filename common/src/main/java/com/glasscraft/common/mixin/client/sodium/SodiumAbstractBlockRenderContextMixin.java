@@ -5,7 +5,6 @@ import com.glasscraft.common.client.ctm.CtmDebug;
 import com.glasscraft.common.client.ctm.CtmResolver;
 import com.glasscraft.common.client.ctm.CtmUvShrink;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.TriState;
 import net.minecraft.world.level.block.state.BlockState;
@@ -20,12 +19,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * CTM para el pipeline de terreno de Sodium 0.9.x: renderQuad es el cuello de
  * botella de todos los quads de terreno, con state/pos/level en el contexto.
  *
- * El shrink es PROPORCIONAL AL PROPIO QUAD (bounding box de sus UVs), no al
- * tile completo: asi funciona igual para cubos (vidrio) y para paneles (cuyas
- * UVs son tiras sub-tile del atlas). Al conectar, tambien se desactiva el AO
- * del quad (setAmbientOcclusion(FALSE)): el AO de vanilla oscurece las
- * esquinas de cada bloque y dibuja lineas sombreadas en las juntas aunque
- * las UVs esten fundidas (visible en la lampara marina).
+ * Shrink PROPORCIONAL AL PROPIO QUAD (bounding box de sus UVs): funciona
+ * igual para cubos (vidrio) y paneles (UVs sub-tile). Al conectar, se
+ * desactiva el AO del quad (setAmbientOcclusion(FALSE)): el AO de vanilla
+ * oscurece las esquinas y dibuja lineas en las juntas (lampara marina).
  */
 @Mixin(net.caffeinemc.mods.sodium.client.render.model.AbstractBlockRenderContext.class)
 abstract class SodiumAbstractBlockRenderContextMixin {
@@ -36,10 +33,16 @@ abstract class SodiumAbstractBlockRenderContextMixin {
 
     @Inject(method = "renderQuad", at = @At("HEAD"), cancellable = true)
     private void glasscraft$shrinkSodiumQuad(MutableQuadViewImpl quad, CallbackInfo ci) {
-        CtmDebug.beginCalls++;
         if (state == null || pos == null || level == null) return;
+        CtmDebug.beginCalls.incrementAndGet();
+        String path = null;
+        if (CtmDebug.seenStates.size() < 300 || CtmDebug.activeStates.size() < 50) {
+            path = state.getBlock().builtInRegistryHolder().key().identifier().getPath();
+            CtmDebug.seeState(path);
+        }
         if (!CtmResolver.isEnabled(state)) return;
-        CtmDebug.activeBlocks++;
+        CtmDebug.activeBlocks.incrementAndGet();
+        if (path != null) CtmDebug.seeActive(path);
 
         CtmContext ctx = CtmContext.get();
         ctx.level = level;
@@ -48,7 +51,7 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         ctx.connectionMask = -1;
 
         int mask = ctx.mask();
-        CtmDebug.quadsTotal++;
+        CtmDebug.quadsTotal.incrementAndGet();
         if (mask == 0) return;
 
         net.minecraft.core.Direction face = quad.getNominalFace();
@@ -59,6 +62,8 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         boolean left = CtmUvShrink.connects(mask, leftOf(face));
         boolean right = CtmUvShrink.connects(mask, rightOf(face));
         if (!up && !down && !left && !right) return;
+        CtmDebug.maskNonZero.incrementAndGet();
+        if (path != null) CtmDebug.seeConnected(path);
 
         // Bounding box de las UVs DEL QUAD (sub-tile en paneles, tile entero
         // en cubos): contraer 1/16 del lado conectado dentro de esa caja.
@@ -84,9 +89,8 @@ abstract class SodiumAbstractBlockRenderContextMixin {
             float fv = (v - qv0) / (qv1 - qv0);
             quad.setUV(i, nu0 + fu * (nu1 - nu0), nv0 + fv * (nv1 - nv0));
         }
-        // AO off: funde las juntas tambien en la iluminacion.
         quad.setAmbientOcclusion(TriState.FALSE);
-        CtmDebug.quadsModified++;
+        CtmDebug.quadsModified.incrementAndGet();
         CtmDebug.sample("sodium");
     }
 
