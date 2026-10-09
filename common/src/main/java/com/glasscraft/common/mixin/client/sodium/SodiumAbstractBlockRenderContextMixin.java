@@ -10,6 +10,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.TriState;
 import net.minecraft.world.level.block.state.BlockState;
 import net.caffeinemc.mods.sodium.client.render.model.MutableQuadViewImpl;
+import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,21 +20,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * CTM para el pipeline de terreno de Sodium 0.9.x.
  *
- * IMPORTANTE (bytecode verificado, FaceBakery.bakeVertex): las posiciones de
- * los quads en 26.2 estan NORMALIZADAS 0..1 (Vector3f.div(16)), NO 0..16
- * como en 1.21. Todas las comparaciones de borde usan 0..1.
+ * SIN ASUNCIONES de convencion UV: el eje mundial de U y V se DERIVA del
+ * propio quad (delta 3D entre vertices de distinta u / v), y los bordes se
+ * identifican comparando la posicion del vertice contra el centro del quad
+ * en ese eje. Funciona igual para cubos y paneles con cualquier rotacion.
  *
- * CUBOS: contrae 1/16 del tile del sprite en cada borde PERPENDICULAR
- * conectado (los vertices de ese borde retroceden 1/16 dentro del tile).
- *
- * PANELES: vanilla ya extiende la geometria al vecino al conectar; la junta
- * es el marco de 1px de la textura en el borde del sprite que apunta al
- * vecino. Se contrae ese borde (derivado por posicion geometrica) del tile.
+ * Posiciones 0..1 (26.2 normaliza, verificado FaceBakery.bakeVertex div(16)).
  */
 @Mixin(net.caffeinemc.mods.sodium.client.render.model.AbstractBlockRenderContext.class)
 abstract class SodiumAbstractBlockRenderContextMixin {
 
-    private static final float EDGE = 0.001f;
+    private static final float EDGE = 0.02f;
 
     @Shadow(remap = false) protected BlockState state;
     @Shadow(remap = false) protected BlockPos pos;
@@ -59,144 +56,98 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         Direction face = quad.getNominalFace();
         if (face == null) return;
 
+        glasscraft$shrinkQuad(quad, face, mask);
+    }
+
+    /**
+     * Contrae 1/16 del tile en cada borde conectado, derivando la
+     * correspondencia UV<->mundo del propio quad:
+     * 1) centro del quad (media de posiciones).
+     * 2) para cada vertice, vector centro->vertice.
+     * 3) U mundial: promedio de (pos_j - pos_i) * sign(u_j - u_i) para pares
+     *    con |du| apreciable — un vector que apunta hacia "+U".
+     * 4) V mundial: igual con v.
+     * 5) para cada vecino conectado (dir), el borde que lo mira son los
+     *    vertices cuyo (vertice-centro)·dir > 0; contraer su UV 1/16 hacia
+     *    el interior: u -= su * dot(uAxis, dir) ... mas simple: contraer el
+     *    COMPONENTE de UV alineado con dir.
+     */
+    private void glasscraft$shrinkQuad(MutableQuadViewImpl quad, Direction face, int mask) {
+        // ejes tangentes de la cara
+        Direction uDir, vDir;
+        switch (face.getAxis()) {
+            case X -> { uDir = Direction.SOUTH; vDir = Direction.UP; }
+            case Y -> { uDir = Direction.EAST; vDir = Direction.SOUTH; }
+            default -> { uDir = Direction.EAST; vDir = Direction.UP; }
+        }
+        // Ajustar signos derivando del quad: comparar UV vs posicion.
+        float[] u = new float[4], v = new float[4];
+        Vector3f[] p = new Vector3f[4];
+        Vector3f center = new Vector3f();
+        for (int i = 0; i < 4; i++) {
+            u[i] = quad.getTexU(i);
+            v[i] = quad.getTexV(i);
+            p[i] = new Vector3f(quad.getX(i), quad.getY(i), quad.getZ(i));
+            center.add(p[i]);
+        }
+        center.mul(1.0f / 4.0f);
+
+        // derivar signo/mapeo de uDir: el vertice con mayor U deberia estar
+        // del lado de la cara apuntado por +uDir. Verificar con un par.
+        // Calcular componente pos en uDir para el vertice de mayor u y menor u.
+        int iMaxU = 0, iMinU = 0;
+        for (int i = 1; i < 4; i++) {
+            if (u[i] > u[iMaxU]) iMaxU = i;
+            if (u[i] < u[iMinU]) iMinU = i;
+        }
+        Vector3f du = new Vector3f(p[iMaxU]).sub(p[iMinU]);
+        // si el vertice con max U esta en direccion +uDir del mundo, du·uVec > 0
+        Vector3f uVec = new Vector3f(uDir.step());
+        if (du.dot(uVec) < 0) uDir = uDir.getOpposite();
+        // igual para V
+        int iMaxV = 0, iMinV = 0;
+        for (int i = 1; i < 4; i++) {
+            if (v[i] > v[iMaxV]) iMaxV = i;
+            if (v[i] < v[iMinV]) iMinV = i;
+        }
+        Vector3f dv = new Vector3f(p[iMaxV]).sub(p[iMinV]);
+        Vector3f vVec = new Vector3f(vDir.step());
+        if (dv.dot(vVec) < 0) vDir = vDir.getOpposite();
+
+        TextureAtlasSprite sprite = quad.cachedSprite();
+        if (sprite == null) return;
+        float su = (sprite.getU1() - sprite.getU0()) / 16.0f;
+        float sv = (sprite.getV1() - sprite.getV0()) / 16.0f;
+
+        boolean changed = false;
+        for (int i = 0; i < 4; i++) {
+            Vector3f rel = new Vector3f(p[i]).sub(center);
+            float nu = u[i], nv = v[i];
+            boolean thisChanged = false;
+            // vecinos conectados en el plano de la cara (todos menos la normal)
+            for (Direction d : Direction.values()) {
+                if (d.getAxis() == face.getAxis()) continue;
+                if ((mask & (1 << d.ordinal())) == 0) continue;
+                boolean onEdge = rel.dot(new Vector3f(d.step())) > 0;
+                if (!onEdge) continue;
+                // este vertice esta en el borde que mira a d: contraer su UV
+                // en el eje UV alineado con d.
+                if (d.getAxis() == uDir.getAxis()) {
+                    nu += (d == uDir) ? -su : su;
+                } else {
+                    nv += (d == vDir) ? -sv : sv;
+                }
+                thisChanged = true;
+            }
+            if (thisChanged) {
+                quad.setUV(i, nu, nv);
+                changed = true;
+            }
+        }
+        if (!changed) return;
+        quad.setAmbientOcclusion(TriState.FALSE);
+        CtmDebug.quadsModified.incrementAndGet();
         boolean paneLike = !state.canOcclude();
-        if (paneLike) {
-            glasscraft$paneShrink(quad, face, mask);
-        } else {
-            glasscraft$cubeShrink(quad, face, mask);
-        }
-    }
-
-    /**
-     * PANELES: contrae 1/16 del tile en el borde geometrico que apunta al
-     * vecino conectado (la conexion de un panel esta en el EJE de la cara
-     * del poste). Vertices en 0..1.
-     */
-    private void glasscraft$paneShrink(MutableQuadViewImpl quad, Direction face, int mask) {
-        boolean front = (mask & (1 << face.getOpposite().ordinal())) != 0;
-        boolean back = (mask & (1 << face.ordinal())) != 0;
-        boolean up = (mask & (1 << Direction.UP.ordinal())) != 0;
-        boolean down = (mask & (1 << Direction.DOWN.ordinal())) != 0;
-        if (!front && !back && !up && !down) return;
-
-        TextureAtlasSprite sprite = quad.cachedSprite();
-        if (sprite == null) return;
-        float su = (sprite.getU1() - sprite.getU0()) / 16.0f;
-        float sv = (sprite.getV1() - sprite.getV0()) / 16.0f;
-
-        Direction.Axis axis = face.getAxis();
-        float[] c = new float[4];
-        for (int i = 0; i < 4; i++) {
-            c[i] = switch (axis) {
-                case X -> quad.getX(i);
-                case Y -> quad.getY(i);
-                case Z -> quad.getZ(i);
-            };
-        }
-        float minEdge = Math.min(Math.min(c[0], c[1]), Math.min(c[2], c[3]));
-        float maxEdge = Math.max(Math.max(c[0], c[1]), Math.max(c[2], c[3]));
-
-        boolean changed = false;
-        for (int i = 0; i < 4; i++) {
-            float u = quad.getTexU(i);
-            float v = quad.getTexV(i);
-            float nu = u, nv = v;
-            boolean thisChanged = false;
-            if (front && Math.abs(c[i] - minEdge) < EDGE) {
-                if (axis == Direction.Axis.X) {
-                    nu = u + (face == Direction.WEST ? -su : su);
-                } else {
-                    nv = v + (face == Direction.SOUTH ? sv : -sv);
-                }
-                thisChanged = true;
-            }
-            if (back && Math.abs(c[i] - maxEdge) < EDGE) {
-                if (axis == Direction.Axis.X) {
-                    nu = u + (face == Direction.EAST ? su : -su);
-                } else {
-                    nv = v + (face == Direction.NORTH ? -sv : sv);
-                }
-                thisChanged = true;
-            }
-            // apilado vertical de paneles: contrae los bordes superior/inferior
-            float y = quad.getY(i);
-            if (up && Math.abs(y - 1.0f) < EDGE) { nv = v + (face.getAxis() == Direction.Axis.Y ? 0 : sv); thisChanged = true; }
-            if (down && Math.abs(y - 0.0f) < EDGE) { nv = v - (face.getAxis() == Direction.Axis.Y ? 0 : sv); thisChanged = true; }
-            if (thisChanged) {
-                quad.setUV(i, nu, nv);
-                changed = true;
-            }
-        }
-        if (!changed) return;
-        quad.setAmbientOcclusion(TriState.FALSE);
-        CtmDebug.quadsModified.incrementAndGet();
-        CtmDebug.sample("pane");
-    }
-
-    /**
-     * CUBO: contrae 1/16 del tile en cada borde perpendicular conectado.
-     * Coordenadas de vertice 0..1.
-     */
-    private void glasscraft$cubeShrink(MutableQuadViewImpl quad, Direction face, int mask) {
-        boolean up = (mask & (1 << upOf(face).ordinal())) != 0;
-        boolean down = (mask & (1 << downOf(face).ordinal())) != 0;
-        boolean left = (mask & (1 << leftOf(face).ordinal())) != 0;
-        boolean right = (mask & (1 << rightOf(face).ordinal())) != 0;
-        if (!up && !down && !left && !right) return;
-
-        TextureAtlasSprite sprite = quad.cachedSprite();
-        if (sprite == null) return;
-        float su = (sprite.getU1() - sprite.getU0()) / 16.0f;
-        float sv = (sprite.getV1() - sprite.getV0()) / 16.0f;
-
-        boolean changed = false;
-        for (int i = 0; i < 4; i++) {
-            float u = quad.getTexU(i);
-            float v = quad.getTexV(i);
-            float nu = u, nv = v;
-            boolean thisChanged = false;
-            float hCoord, vCoord;
-            switch (face) {
-                case NORTH, SOUTH -> { hCoord = quad.getX(i); vCoord = quad.getY(i); }
-                case EAST, WEST -> { hCoord = quad.getZ(i); vCoord = quad.getY(i); }
-                default -> { hCoord = quad.getX(i); vCoord = quad.getZ(i); }
-            }
-            if (left && hCoord < EDGE) { nu = u + su; thisChanged = true; }
-            if (right && hCoord > 1.0f - EDGE) { nu = u - su; thisChanged = true; }
-            if (up && vCoord > 1.0f - EDGE) { nv = v + sv; thisChanged = true; }
-            if (down && vCoord < EDGE) { nv = v - sv; thisChanged = true; }
-            if (thisChanged) {
-                quad.setUV(i, nu, nv);
-                changed = true;
-            }
-        }
-        if (!changed) return;
-        quad.setAmbientOcclusion(TriState.FALSE);
-        CtmDebug.quadsModified.incrementAndGet();
-        CtmDebug.sample("cube");
-    }
-
-    private static Direction upOf(Direction face) {
-        return switch (face) {
-            case UP -> Direction.NORTH;
-            case DOWN -> Direction.SOUTH;
-            default -> Direction.UP;
-        };
-    }
-
-    private static Direction downOf(Direction face) {
-        return upOf(face).getOpposite();
-    }
-
-    private static Direction leftOf(Direction face) {
-        return switch (face) {
-            case UP -> Direction.WEST;
-            case DOWN -> Direction.EAST;
-            default -> face.getClockWise();
-        };
-    }
-
-    private static Direction rightOf(Direction face) {
-        return leftOf(face).getOpposite();
+        CtmDebug.sample(paneLike ? "pane" : "cube");
     }
 }
