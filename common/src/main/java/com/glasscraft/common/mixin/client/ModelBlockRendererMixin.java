@@ -35,10 +35,11 @@ abstract class ModelBlockRendererMixin {
                                         net.minecraft.client.renderer.block.dispatch.BlockStateModel model,
                                         long seed, CallbackInfo ci) {
         if (state.isAir()) return;
-        // Solo cubos completos: paneles y bloques con formas raras quedan
-        // fuera (sus UVs son sub-tile y la contraccion full-tile los
-        // distorsionaria; ademas sus quads internos van con direction=null).
-        if (!state.canOcclude()) return;
+        // OJO: NO filtrar por canOcclude() — el vidrio NO occlude (es
+        // translucido) y quedaba excluido exactamente el material del CTM.
+        // En su lugar excluye paneles (sub-tile UVs) por path vanilla; los
+        // de mods con formas no-cubo quedan fuera por su propio tag/config.
+        if (CtmResolver.isVanillaPane(state)) return;
         if (!CtmResolver.isEnabled(state)) return;
         CtmContext ctx = CtmContext.get();
         ctx.level = level;

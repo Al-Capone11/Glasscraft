@@ -45,6 +45,17 @@ public final class CtmResolver {
         return c.resolves(namespace, path);
     }
 
+    /**
+     * Paneles vanilla: sus UVs son tiras sub-tile del atlas; la contraccion
+     * full-tile los distorsionaria. Quedan fuera del CTM por ahora.
+     */
+    public static boolean isVanillaPane(BlockState state) {
+        Identifier id = state.getBlock().builtInRegistryHolder().key().identifier();
+        if (!"minecraft".equals(id.getNamespace())) return false;
+        String path = id.getPath();
+        return path.equals("glass_pane") || path.endsWith("_stained_glass_pane");
+    }
+
     /** ¿El vecino en esa direccion conecta con este bloque? */
     public static boolean connects(BlockState self, Direction dir, BlockPos pos,
                                    net.minecraft.world.level.BlockGetter level) {
