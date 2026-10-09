@@ -61,10 +61,17 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         Direction face = quad.getNominalFace();
         if (face == null) return;
 
-        glasscraft$shrinkQuad(quad, face, mask);
+        // PANELES: las tapas up/down (glass_pane_top) nunca participan en la
+        // continuidad — su textura es un anillo distinto del vidrio y
+        // contraerlas muestra textura del vecino (bug paneles apilados).
+        // La union apilada ya es geometrica en vanilla. Solo caras laterales.
+        boolean paneLike = !state.canOcclude();
+        if (paneLike && (face == Direction.UP || face == Direction.DOWN)) return;
+
+        glasscraft$shrinkQuad(quad, face, mask, paneLike);
     }
 
-    private void glasscraft$shrinkQuad(MutableQuadViewImpl quad, Direction face, int mask) {
+    private void glasscraft$shrinkQuad(MutableQuadViewImpl quad, Direction face, int mask, boolean paneLike) {
         // ejes tangentes canonicos, signos corregidos con los datos del quad
         Direction uDir, vDir;
         switch (face.getAxis()) {
@@ -140,7 +147,6 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         if (!changed) return;
         quad.setAmbientOcclusion(TriState.FALSE);
         CtmDebug.quadsModified.incrementAndGet();
-        boolean paneLike = !state.canOcclude();
         CtmDebug.sample(paneLike ? "pane" : "cube");
     }
 }
