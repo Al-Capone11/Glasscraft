@@ -8,19 +8,25 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Plugin de config de mixins de Sodium: solo aplica si Sodium esta presente
- * (deteccion por classpath, sin API de loader — funciona en ambos loaders).
+ * Plugin de config de mixins de Sodium: solo aplica si Sodium esta presente.
+ *
+ * OJO: la deteccion NO usa Class.forName — cargar la clase objetivo con
+ * Class.forName dispara MixinTargetAlreadyLoadedException en los mixins de
+ * OTROS mods (Iris mixinea AbstractBlockRenderContext): si la clase ya esta
+ * cargada sin transformar, Mixin no puede aplicarse. Se detecta por la
+ * existencia del RECURSO .class en el classpath (getResource no carga la
+ * clase, solo la localiza).
  */
 public class GlasscraftSodiumMixinPlugin implements IMixinConfigPlugin {
 
+    private static Boolean cachedPresent;
+
     private static boolean sodiumPresent() {
-        try {
-            Class.forName("net.caffeinemc.mods.sodium.client.render.model.AbstractBlockRenderContext",
-                false, GlasscraftSodiumMixinPlugin.class.getClassLoader());
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
+        if (cachedPresent == null) {
+            cachedPresent = GlasscraftSodiumMixinPlugin.class.getClassLoader()
+                .getResource("net/caffeinemc/mods/sodium/client/render/model/AbstractBlockRenderContext.class") != null;
         }
+        return cachedPresent;
     }
 
     @Override
