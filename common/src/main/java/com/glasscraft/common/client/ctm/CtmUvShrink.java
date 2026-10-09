@@ -1,0 +1,105 @@
+package com.glasscraft.common.client.ctm;
+
+import net.minecraft.client.model.geom.builders.UVPair;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+
+/**
+ * Contraccion de UVs estilo OptiFine "glass.ctm": cuando la cara de un bloque
+ * conecta con un vecino identico, contraemos las UV de esa cara hacia el
+ * centro del tile (1/16 = 1 pixel de margen). Vecinos opuestos desplazan el
+ * centro del muestreo para que el patron de borde quede alineado.
+ *
+ * BakedQuad 26.2 (verificado): record inmutable con 4x packedUV (long) via
+ * UVPair.pack(u,v); se reconstruye el quad con UVs modificadas.
+ */
+public final class CtmUvShrink {
+
+    /** Contraccion en fraccion de tile (1 pixel de 16). */
+    private static final float SHRINK = 1.0f / 16.0f;
+
+    private CtmUvShrink() {}
+
+    /**
+     * Reconstruye el quad con UVs contraidas si la cara 'dir' conecta.
+     * Devuelve el quad original si no hay que tocar nada.
+     */
+    public static BakedQuad shrinkIfConnected(BakedQuad quad, Direction face, int connectionMask) {
+        if (connectionMask == 0) return quad;
+
+        TextureAtlasSprite sprite = quad.materialInfo().sprite();
+        float u0 = sprite.getU0(), u1 = sprite.getU1();
+        float v0 = sprite.getV0(), v1 = sprite.getV1();
+
+        float su = (u1 - u0) * SHRINK;
+        float sv = (v1 - v0) * SHRINK;
+
+        // Desplazar el centro de muestreo si conecta por los lados
+        // perpendiculares a la cara (compress vertical/horizontal).
+        boolean up = connectsDir(connectionMask, upOf(face));
+        boolean down = connectsDir(connectionMask, downOf(face));
+        boolean left = connectsDir(connectionMask, leftOf(face));
+        boolean right = connectsDir(connectionMask, rightOf(face));
+
+        // Ejes UV dependen de la cara (mapeo vanilla estandar de FaceBakery).
+        // Contraer el lado que conecta: si conecta 'down', la V superior baja.
+        float nu0 = u0 + (left ? su : 0);
+        float nu1 = u1 - (right ? su : 0);
+        // V0 = borde SUPERIOR del tile: contraer arriba cuando conecta 'up'.
+        float nv0 = v0 + (up ? sv : 0);
+        float nv1 = v1 - (down ? sv : 0);
+
+        return new BakedQuad(
+            quad.position0(), quad.position1(), quad.position2(), quad.position3(),
+            UVPair.pack(remapU(quad.packedUV0(), u0, u1, nu0, nu1), remapV(quad.packedUV0(), v0, v1, nv0, nv1)),
+            UVPair.pack(remapU(quad.packedUV1(), u0, u1, nu0, nu1), remapV(quad.packedUV1(), v0, v1, nv0, nv1)),
+            UVPair.pack(remapU(quad.packedUV2(), u0, u1, nu0, nu1), remapV(quad.packedUV2(), v0, v1, nv0, nv1)),
+            UVPair.pack(remapU(quad.packedUV3(), u0, u1, nu0, nu1), remapV(quad.packedUV3(), v0, v1, nv0, nv1)),
+            quad.direction(), quad.materialInfo());
+    }
+
+    /** Reempaqueta U del rango original del tile al rango contraido. */
+    private static long remapU(long packedUV, float u0, float u1, float nu0, float nu1) {
+        float u = UVPair.unpackU(packedUV);
+        float f = (u - u0) / (u1 - u0);
+        return UVPair.pack(nu0 + f * (nu1 - nu0), UVPair.unpackV(packedUV));
+    }
+
+    private static long remapV(long packedUV, float v0, float v1, float nv0, float nv1) {
+        float v = UVPair.unpackV(packedUV);
+        float f = (v - v0) / (v1 - v0);
+        return UVPair.pack(UVPair.unpackU(packedUV), nv0 + f * (nv1 - nv0));
+    }
+
+    private static boolean connectsDir(int mask, Direction d) {
+        return d != null && (mask & (1 << d.ordinal())) != 0;
+    }
+
+    /** Vecino 'arriba' en el plano de la cara (para contraer V-top). */
+    private static Direction upOf(Direction face) {
+        return switch (face) {
+            case UP -> Direction.NORTH;
+            case DOWN -> Direction.SOUTH;
+            default -> Direction.UP;
+        };
+    }
+
+    private static Direction downOf(Direction face) {
+        return upOf(face).getOpposite();
+    }
+
+    private static Direction leftOf(Direction face) {
+        return switch (face) {
+            case UP -> Direction.WEST;
+            case DOWN -> Direction.EAST;
+            default -> face.getClockWise();
+        };
+    }
+
+    private static Direction rightOf(Direction face) {
+        return leftOf(face).getOpposite();
+    }
+}

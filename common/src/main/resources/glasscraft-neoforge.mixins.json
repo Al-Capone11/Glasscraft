@@ -9,6 +9,9 @@
     "ItemStackMixinNeoForge",
     "BlockDropResourcesMixin"
   ],
+  "client": [
+    "client.ModelBlockRendererMixin"
+  ],
   "injectors": {
     "defaultInjectorRequireValue": 1
   }
