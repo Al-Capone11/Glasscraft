@@ -4,6 +4,7 @@ import com.glasscraft.common.client.ctm.CtmContext;
 import com.glasscraft.common.client.ctm.CtmDebug;
 import com.glasscraft.common.client.ctm.CtmResolver;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.TriState;
@@ -18,13 +19,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * CTM para el pipeline de terreno de Sodium 0.9.x.
  *
- * Dos modos segun la forma del bloque:
- * - CUBO (vidrio, glowstone, linterna): contrae el borde de la cara en cada
- *   direccion PERPENDICULAR conectada (up/down/left/right de la cara).
- * - PANEL (glass_pane): el quad-poste mira HACIA el vecino (E/W). Si conecta
- *   en el eje de la propia cara, se ESTIRA el quad hasta el borde del bloque
- *   (de 14px a 16px de ancho), cubriendo la junta; ademas su AO se apaga.
- *   La rama de paneles solo aplica a bloques no-occluders con la misma cara.
+ * CUBOS (vidrio/glowstone/linterna): contrae 1/16 del tile del sprite en cada
+ * borde PERPENDICULAR conectado — el borde oscuro de la textura queda absorbido.
+ *
+ * PANELES: vanilla ya extiende la geometria al bloque vecino cuando conecta
+ * (pane_side llega hasta el borde). La junta visible es el marco de 1px de la
+ * textura glass_pane en el borde del sprite que apunta al vecino. Fix:
+ * contraer 1/16 del TILE (no del quad: el quad es una franja de 7px donde
+ * 1/16 de quad seria sub-pixel) del borde que apunta al vecino, derivando
+ * QUE borde UV es por la POSICION GEOMETRICA de los vertices (de los 4
+ * vertices, 2 estan pegados al borde del bloque en el eje de la cara).
  */
 @Mixin(net.caffeinemc.mods.sodium.client.render.model.AbstractBlockRenderContext.class)
 abstract class SodiumAbstractBlockRenderContextMixin {
@@ -53,72 +57,95 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         Direction face = quad.getNominalFace();
         if (face == null) return;
 
-        boolean isPaneLike = !state.canOcclude();
-        if (isPaneLike && CtmResolver.isVanillaPane(state)) {
-            glasscraft$paneStretch(quad, face, mask);
-            return;
+        boolean paneLike = !state.canOcclude();
+        if (paneLike) {
+            glasscraft$paneShrink(quad, face, mask);
+        } else {
+            glasscraft$cubeShrink(quad, face, mask);
         }
-        glasscraft$cubeShrink(quad, face, mask);
     }
 
     /**
-     * PANEL: si conecta en la direccion de la propia cara (el vecino esta
-     * delante/detras del quad-poste), estirar el quad en ese eje hasta el
-     * borde del bloque (de 2/16 a 4/16 de ancho de poste) para cubrir la
-     * junta. Contrae tambien el lado opuesto si conecta alli.
+     * PANELES: contrae 1/16 del TILE del sprite en el borde que apunta al
+     * vecino. Los paneles conectan en el EJE de la cara (el quad-poste mira
+     * E/W y el vecino esta al E/W). Se identifica que par de vertices UV
+     * corresponden al borde geometrico hacia el vecino usando las posiciones
+     * XYZ locales (0..1) del quad: los vertices pegados al borde del bloque
+     * en el eje de la cara son los que hay que contraer.
      */
-    private void glasscraft$paneStretch(MutableQuadViewImpl quad, Direction face, int mask) {
-        // eje de la cara: NORTH/SOUTH -> eje Z; EAST/WEST -> eje X.
-        boolean frontConnected = (mask & (1 << face.getOpposite().ordinal())) != 0;
-        boolean backConnected = (mask & (1 << face.ordinal())) != 0;
-        if (!frontConnected && !backConnected) return;
+    private void glasscraft$paneShrink(MutableQuadViewImpl quad, Direction face, int mask) {
+        // El vecino en la direccion de la cara o su opuesta.
+        boolean front = (mask & (1 << face.getOpposite().ordinal())) != 0;
+        boolean back = (mask & (1 << face.ordinal())) != 0;
+        boolean up = (mask & (1 << Direction.UP.ordinal())) != 0;
+        boolean down = (mask & (1 << Direction.DOWN.ordinal())) != 0;
+        if (!front && !back && !up && !down) return;
 
-        // El quad-poste se estira en su eje transversal (el ancho del poste).
-        // Para face EAST/WEST el poste es una tira en X; para NORTH/SOUTH en Z.
-        // UVs: estirar el bounding box en el eje correspondiente.
-        float qu0 = Float.MAX_VALUE, qu1 = -Float.MAX_VALUE;
-        float qv0 = Float.MAX_VALUE, qv1 = -Float.MAX_VALUE;
+        TextureAtlasSprite sprite = quad.cachedSprite();
+        if (sprite == null) return;
+        float su = (sprite.getU1() - sprite.getU0()) / 16.0f;
+        float sv = (sprite.getV1() - sprite.getV0()) / 16.0f;
+
+        // Eje de la cara: para E/W el eje transversal del quad es X; para N/S es Z.
+        // El quad del poste tiene 4 vertices: 2 pegados a un borde del bloque
+        // (el que apunta al vecino), 2 al otro. Contraer los UVs de los vertices
+        // del borde QUE CONECTA hacia el interior del tile (1/16).
+        // Distinguir par: por coordenada local del vertice en el eje de la cara.
+        // posiciones locales: getX/getY/getZ devuelven 0..16 relativos al bloque.
+        Direction axis = face; // eje de la cara
+        float minEdge, maxEdge;
+        // coordenadas de los 4 vertices en el eje de la cara
+        float[] c = new float[4];
+        for (int i = 0; i < 4; i++) {
+            c[i] = switch (axis.getAxis()) {
+                case X -> quad.getX(i);
+                case Y -> quad.getY(i);
+                case Z -> quad.getZ(i);
+            };
+        }
+        minEdge = Math.min(Math.min(c[0], c[1]), Math.min(c[2], c[3]));
+        maxEdge = Math.max(Math.max(c[0], c[1]), Math.max(c[2], c[3]));
+
+        boolean changed = false;
         for (int i = 0; i < 4; i++) {
             float u = quad.getTexU(i);
             float v = quad.getTexV(i);
-            qu0 = Math.min(qu0, u); qu1 = Math.max(qu1, u);
-            qv0 = Math.min(qv0, v); qv1 = Math.max(qv1, v);
+            float nu = u, nv = v;
+            // vertice en el borde minimo (apunta a la direccion negativa del eje)
+            if (front && Math.abs(c[i] - minEdge) < 0.01f) {
+                // contraer el UV de este vertice 1/16 hacia el interior del tile
+                // en el eje UV que corresponda segun la cara (para E/W: eje U del tile
+                // mapea el eje X? No — las UV del quad-poste de pane_side usan franjas
+                // del sprite glass; el borde del bloque en X corresponde a U del sprite.
+                if (axis.getAxis() == Direction.Axis.X) {
+                    nu = u + (face == Direction.WEST ? su : -su);
+                } else {
+                    nv = v + (face == Direction.SOUTH ? sv : -sv);
+                }
+                changed = true;
+            }
+            if (back && Math.abs(c[i] - maxEdge) < 0.01f) {
+                if (axis.getAxis() == Direction.Axis.X) {
+                    nu = u + (face == Direction.EAST ? su : -su);
+                } else {
+                    nv = v + (face == Direction.NORTH ? sv : -sv);
+                }
+                changed = true;
+            }
+            // estiramiento vertical con vecinos arriba/abajo (pane apilado)
+            float y = quad.getY(i);
+            if (up && Math.abs(y - 16.0f) < 0.01f) { nv = v + sv; changed = true; }
+            if (down && Math.abs(y - 0.0f) < 0.01f) { nv = v - sv; changed = true; }
+            if (changed) quad.setUV(i, nu, nv);
         }
-
-        // Eje de estiramiento: para caras N/S, la tira corre en U (textura horizontal).
-        // Simplificacion robusta: estirar AMBOS ejes proporcionalmente al
-        // bounding box, expandiendo 1/16 hacia cada lado conectado.
-        float su = (qu1 - qu0);
-        float sv = (qv1 - qv0);
-        float nu0 = qu0, nu1 = qu1, nv0 = qv0, nv1 = qv1;
-        if (face.getAxis() == Direction.Axis.X) {
-            // cara E/W: el poste corre verticalmente; estirar V si conecta arriba/abajo
-            if ((mask & (1 << Direction.UP.ordinal())) != 0) nv0 = qv0 - sv;
-            if ((mask & (1 << Direction.DOWN.ordinal())) != 0) nv1 = qv1 + sv;
-            // y estirar U hacia el vecino frontal/trasero (mismo plano de textura)
-            if (frontConnected) nu0 = qu0 - su * 0.5f;
-            if (backConnected) nu1 = qu1 + su * 0.5f;
-        } else {
-            if ((mask & (1 << Direction.UP.ordinal())) != 0) nv0 = qv0 - sv;
-            if ((mask & (1 << Direction.DOWN.ordinal())) != 0) nv1 = qv1 + sv;
-            if (frontConnected) nu1 = qu1 + su * 0.5f;
-            if (backConnected) nu0 = qu0 - su * 0.5f;
-        }
-
-        for (int i = 0; i < 4; i++) {
-            float u = quad.getTexU(i);
-            float v = quad.getTexV(i);
-            float fu = (u - qu0) / (qu1 - qu0);
-            float fv = (v - qv0) / (qv1 - qv0);
-            quad.setUV(i, nu0 + fu * (nu1 - nu0), nv0 + fv * (nv1 - nv0));
-        }
+        if (!changed) return;
         quad.setAmbientOcclusion(TriState.FALSE);
         CtmDebug.quadsModified.incrementAndGet();
         CtmDebug.sample("pane");
     }
 
     /**
-     * CUBO: contrae 1/16 del lado conectado dentro del bounding box UV del quad.
+     * CUBO: contrae 1/16 del tile en cada borde perpendicular conectado.
      */
     private void glasscraft$cubeShrink(MutableQuadViewImpl quad, Direction face, int mask) {
         boolean up = (mask & (1 << upOf(face).ordinal())) != 0;
@@ -127,28 +154,36 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         boolean right = (mask & (1 << rightOf(face).ordinal())) != 0;
         if (!up && !down && !left && !right) return;
 
-        float qu0 = Float.MAX_VALUE, qu1 = -Float.MAX_VALUE;
-        float qv0 = Float.MAX_VALUE, qv1 = -Float.MAX_VALUE;
-        for (int i = 0; i < 4; i++) {
-            float u = quad.getTexU(i);
-            float v = quad.getTexV(i);
-            qu0 = Math.min(qu0, u); qu1 = Math.max(qu1, u);
-            qv0 = Math.min(qv0, v); qv1 = Math.max(qv1, v);
-        }
-        float su = (qu1 - qu0) * (1.0f / 16.0f);
-        float sv = (qv1 - qv0) * (1.0f / 16.0f);
-        float nu0 = qu0 + (left ? su : 0);
-        float nu1 = qu1 - (right ? su : 0);
-        float nv0 = qv0 + (up ? sv : 0);
-        float nv1 = qv1 - (down ? sv : 0);
+        TextureAtlasSprite sprite = quad.cachedSprite();
+        if (sprite == null) return;
+        float su = (sprite.getU1() - sprite.getU0()) / 16.0f;
+        float sv = (sprite.getV1() - sprite.getV0()) / 16.0f;
 
+        // contraer los UVs en funcion de la posicion geometrica del vertice
+        // dentro de la cara (0..16): los vertices del borde conectado retroceden
+        // 1/16 dentro del tile.
+        boolean changed = false;
         for (int i = 0; i < 4; i++) {
             float u = quad.getTexU(i);
             float v = quad.getTexV(i);
-            float fu = (u - qu0) / (qu1 - qu0);
-            float fv = (v - qv0) / (qv1 - qv0);
-            quad.setUV(i, nu0 + fu * (nu1 - nu0), nv0 + fv * (nv1 - nv0));
+            float nu = u, nv = v;
+            // eje U de la cara = eje horizontal del quad; eje V = vertical.
+            // Para caras N/S: X es U; para E/W: Z es U; para UP/DOWN: X es U.
+            float hCoord, vCoord;
+            switch (face) {
+                case NORTH, SOUTH -> { hCoord = quad.getX(i); vCoord = quad.getY(i); }
+                case EAST, WEST -> { hCoord = quad.getZ(i); vCoord = quad.getY(i); }
+                default -> { hCoord = quad.getX(i); vCoord = quad.getZ(i); }
+            }
+            // hCoord/vCoord en 0..16: contraer bordes conectados.
+            // Mapa hCoord->U, vCoord->V (convencion vanilla de FaceBakery).
+            if (left && hCoord < 0.01f) { nu = u + su; changed = true; }
+            if (right && hCoord > 15.99f) { nu = u - su; changed = true; }
+            if (up && vCoord > 15.99f) { nv = v + sv; changed = true; }
+            if (down && vCoord < 0.01f) { nv = v - sv; changed = true; }
+            if (changed) quad.setUV(i, nu, nv);
         }
+        if (!changed) return;
         quad.setAmbientOcclusion(TriState.FALSE);
         CtmDebug.quadsModified.incrementAndGet();
         CtmDebug.sample("cube");
