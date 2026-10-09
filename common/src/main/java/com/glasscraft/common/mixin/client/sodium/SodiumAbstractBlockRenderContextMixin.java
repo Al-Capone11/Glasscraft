@@ -68,17 +68,26 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         boolean paneLike = !state.canOcclude();
         if (paneLike && (face == Direction.UP || face == Direction.DOWN)) return;
 
+        // DUMP de diagnostico: primeros quads con vecinos, con todos los datos.
+        if (mask != 0 && CtmDebug.dumpsRemaining.get() > 0) {
+            CtmDebug.dumpsRemaining.decrementAndGet();
+            TextureAtlasSprite s0 = quad.cachedSprite();
+            if (s0 != null) {
+                CtmDebug.LOGGER.info(
+                    "[DUMP] face={} pane={} sprite={} u=[{}/{}] v=[{}/{}] tileU=[{}/{}] tileV=[{}/{}] mask={}",
+                    face, paneLike, s0.contents().name(),
+                    String.format("%.4f", quad.getTexU(0)), String.format("%.4f", quad.getTexU(2)),
+                    String.format("%.4f", quad.getTexV(0)), String.format("%.4f", quad.getTexV(2)),
+                    String.format("%.4f", s0.getU0()), String.format("%.4f", s0.getU1()),
+                    String.format("%.4f", s0.getV0()), String.format("%.4f", s0.getV1()),
+                    Integer.toBinaryString(mask));
+            }
+        }
+
         glasscraft$shrinkQuad(quad, face, mask, paneLike);
     }
 
     private void glasscraft$shrinkQuad(MutableQuadViewImpl quad, Direction face, int mask, boolean paneLike) {
-        // ejes tangentes canonicos, signos corregidos con los datos del quad
-        Direction uDir, vDir;
-        switch (face.getAxis()) {
-            case X -> { uDir = Direction.SOUTH; vDir = Direction.UP; }
-            case Y -> { uDir = Direction.EAST; vDir = Direction.SOUTH; }
-            default -> { uDir = Direction.EAST; vDir = Direction.UP; }
-        }
         float[] u = new float[4], v = new float[4];
         Vector3f[] p = new Vector3f[4];
         Vector3f center = new Vector3f();
@@ -97,10 +106,29 @@ abstract class SodiumAbstractBlockRenderContextMixin {
             if (v[i] > v[iMaxV]) iMaxV = i;
             if (v[i] < v[iMinV]) iMinV = i;
         }
+        // DERIVAR EJE Y SIGNO de U con los datos del quad (no asumir el eje
+        // canonico: un quad puede mapear U a cualquiera de los dos ejes
+        // tangentes; con dot~0 el signo aleatorio contraia el eje equivocado).
+        // Se prueban AMBOS ejes tangentes y gana el de mayor |dot|.
+        Direction.Axis normalAxis = face.getAxis();
+        Direction t1 = (normalAxis == Direction.Axis.X) ? Direction.SOUTH : Direction.EAST;
+        Direction t2 = (normalAxis == Direction.Axis.Y) ? Direction.SOUTH : Direction.UP;
         Vector3f du = new Vector3f(p[iMaxU]).sub(p[iMinU]);
-        if (du.dot(new Vector3f(uDir.step())) < 0) uDir = uDir.getOpposite();
+        float dU1 = du.dot(new Vector3f(t1.step()));
+        float dU2 = du.dot(new Vector3f(t2.step()));
+        Direction uAxis;
+        if (Math.abs(dU1) >= Math.abs(dU2)) {
+            uAxis = (dU1 >= 0) ? t1 : t1.getOpposite();
+        } else {
+            uAxis = (dU2 >= 0) ? t2 : t2.getOpposite();
+        }
+        // V es el OTRO eje tangente, signo derivado igual.
+        Direction other = (uAxis.getAxis() == t1.getAxis()) ? t2 : t1;
         Vector3f dv = new Vector3f(p[iMaxV]).sub(p[iMinV]);
-        if (dv.dot(new Vector3f(vDir.step())) < 0) vDir = vDir.getOpposite();
+        float dV = dv.dot(new Vector3f(other.step()));
+        Direction vAxis = (dV >= 0) ? other : other.getOpposite();
+        Direction uDir = uAxis;
+        Direction vDir = vAxis;
 
         TextureAtlasSprite sprite = quad.cachedSprite();
         if (sprite == null) return;

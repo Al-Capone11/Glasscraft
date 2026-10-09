@@ -20,6 +20,8 @@ public final class CtmDebug {
     public static final AtomicLong quadsModified = new AtomicLong();
     public static final AtomicLong quadsTotal = new AtomicLong();
 
+    public static final java.util.concurrent.atomic.AtomicInteger dumpsRemaining = new java.util.concurrent.atomic.AtomicInteger(30);
+
     /** path de bloque -> veces que fue el estado del hook (solo primeros 200 paths). */
     public static final ConcurrentHashMap<String, AtomicLong> seenStates = new ConcurrentHashMap<>();
     /** path de bloque que paso isEnabled. */
