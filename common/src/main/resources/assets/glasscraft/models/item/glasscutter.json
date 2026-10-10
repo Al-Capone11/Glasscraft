@@ -1,6 +1,415 @@
 {
-  "parent": "minecraft:item/handheld",
   "textures": {
-    "layer0": "glasscraft:item/glasscutter"
+    "0": "glasscraft:item/glasscutter"
+  },
+  "elements": [
+    {
+      "name": "mango_palo",
+      "from": [
+        7,
+        0.5,
+        7
+      ],
+      "to": [
+        9,
+        9.5,
+        9
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "z",
+        "origin": [
+          8,
+          7.35,
+          8
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            2,
+            2,
+            10
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            0,
+            2,
+            2,
+            10
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            0,
+            2,
+            2,
+            10
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            0,
+            2,
+            2,
+            10
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            1,
+            0,
+            2,
+            1
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "union_cobre",
+      "from": [
+        6.75,
+        9.5,
+        6.75
+      ],
+      "to": [
+        9.25,
+        10.5,
+        9.25
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "z",
+        "origin": [
+          8,
+          7.35,
+          8
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            0,
+            5,
+            1
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            4,
+            0,
+            5,
+            1
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            4,
+            0,
+            5,
+            1
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            4,
+            0,
+            5,
+            1
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            5,
+            0,
+            6,
+            1
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            3,
+            0,
+            4,
+            1
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "cabezal_hierro",
+      "from": [
+        6,
+        10.5,
+        7.25
+      ],
+      "to": [
+        10,
+        15.5,
+        8.75
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "z",
+        "origin": [
+          8,
+          7.35,
+          8
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            2,
+            8,
+            5
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            7,
+            0,
+            8,
+            1
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            4,
+            2,
+            8,
+            5
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            7,
+            0,
+            8,
+            1
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            8,
+            0,
+            9,
+            1
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            6,
+            0,
+            7,
+            1
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "name": "punta_diamante",
+      "from": [
+        10,
+        13.6,
+        7
+      ],
+      "to": [
+        11.6,
+        15.2,
+        9
+      ],
+      "rotation": {
+        "angle": -45,
+        "axis": "z",
+        "origin": [
+          9,
+          8.35,
+          8
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            8,
+            2,
+            10,
+            4
+          ],
+          "texture": "#0"
+        },
+        "east": {
+          "uv": [
+            10,
+            0,
+            11,
+            1
+          ],
+          "texture": "#0"
+        },
+        "south": {
+          "uv": [
+            8,
+            2,
+            10,
+            4
+          ],
+          "texture": "#0"
+        },
+        "west": {
+          "uv": [
+            10,
+            0,
+            11,
+            1
+          ],
+          "texture": "#0"
+        },
+        "up": {
+          "uv": [
+            11,
+            0,
+            12,
+            1
+          ],
+          "texture": "#0"
+        },
+        "down": {
+          "uv": [
+            9,
+            0,
+            10,
+            1
+          ],
+          "texture": "#0"
+        }
+      }
+    }
+  ],
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        0,
+        -90,
+        55
+      ],
+      "translation": [
+        0,
+        4,
+        0.5
+      ],
+      "scale": [
+        1.15,
+        1.15,
+        1.15
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        0,
+        90,
+        -55
+      ],
+      "translation": [
+        0,
+        4,
+        0.5
+      ],
+      "scale": [
+        1.15,
+        1.15,
+        1.15
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        -90,
+        25
+      ],
+      "translation": [
+        1.13,
+        3.2,
+        1.13
+      ],
+      "scale": [
+        0.92,
+        0.92,
+        0.92
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        0,
+        90,
+        -25
+      ],
+      "translation": [
+        1.13,
+        3.2,
+        1.13
+      ],
+      "scale": [
+        0.92,
+        0.92,
+        0.92
+      ]
+    },
+    "ground": {
+      "translation": [
+        0,
+        2,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.7,
+        0.7
+      ]
+    },
+    "gui": {
+      "scale": [
+        1.4,
+        1.4,
+        1.4
+      ]
+    },
+    "fixed": {
+      "scale": [
+        1.2,
+        1.2,
+        1.2
+      ]
+    }
   }
 }

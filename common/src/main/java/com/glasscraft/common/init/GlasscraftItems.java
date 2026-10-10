@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * Registro del Glasscutter. Dos rutas:
+ * Registro de items de Glasscraft. Dos rutas:
  * - Fabric: registerDirect() en el entrypoint (los registros siguen abiertos ahi).
  * - NeoForge: el loader crea un DeferredRegister y bind()ea el supplier; el
  *   registro directo en NeoForge crashea con "Registry is already frozen"
@@ -28,6 +28,9 @@ public final class GlasscraftItems {
 
     public static final ResourceKey<Item> GLASSCUTTER_KEY =
         ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(Glasscraft.MOD_ID, "glasscutter"));
+
+    public static final ResourceKey<Item> GLASSCUTTER_HEAD_KEY =
+        ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(Glasscraft.MOD_ID, "glasscutter_head"));
 
     /** Tag de bloques que el Glasscutter corta con drops garantizados. */
     public static final TagKey<net.minecraft.world.level.block.Block> GLASSCUTTER_EFFECTIVE =
@@ -40,6 +43,7 @@ public final class GlasscraftItems {
     public static final int DURABILITY = 250;
 
     private static volatile Supplier<Item> holder = () -> null;
+    private static volatile Supplier<Item> headHolder = () -> null;
 
     private GlasscraftItems() {}
 
@@ -49,11 +53,19 @@ public final class GlasscraftItems {
         Item item = new GlasscutterItem(buildProperties());
         net.minecraft.core.Registry.register(BuiltInRegistries.ITEM, GLASSCUTTER_KEY, item);
         bind(() -> item);
+
+        Item head = new Item(buildHeadProperties());
+        net.minecraft.core.Registry.register(BuiltInRegistries.ITEM, GLASSCUTTER_HEAD_KEY, head);
+        bindHead(() -> head);
     }
 
-    /** NeoForge: el DeferredRegister invoca este supplier durante el registro. */
+    /** NeoForge: el DeferredRegister invoca estos suppliers durante el registro. */
     public static Item buildForDeferred() {
         return new GlasscutterItem(buildProperties());
+    }
+
+    public static Item buildHeadForDeferred() {
+        return new Item(buildHeadProperties());
     }
 
     /** Establece el supplier del item ya registrado (desde cualquier loader). */
@@ -61,8 +73,16 @@ public final class GlasscraftItems {
         holder = supplier;
     }
 
+    public static void bindHead(Supplier<Item> supplier) {
+        headHolder = supplier;
+    }
+
     public static Item glasscutter() {
         return holder.get();
+    }
+
+    public static Item glasscutterHead() {
+        return headHolder.get();
     }
 
     public static boolean isGlasscutter(Item item) {
@@ -93,5 +113,10 @@ public final class GlasscraftItems {
             .component(DataComponents.TOOL, tool)
             .repairable(net.minecraft.tags.ItemTags.IRON_TOOL_MATERIALS)
             .enchantable(14); // enchantability de hierro
+    }
+
+    /** Item simple sin logica: ingrediente intermedio de crafteo. */
+    private static Item.Properties buildHeadProperties() {
+        return new Item.Properties().setId(GLASSCUTTER_HEAD_KEY);
     }
 }

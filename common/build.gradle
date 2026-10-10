@@ -33,6 +33,7 @@ dependencies {
 }
 
 loom {
+    accessWidenerPath = file("src/main/resources/glasscraft.accesswidener")
     mods {
         "glasscraft-common" {
             sourceSet sourceSets.main

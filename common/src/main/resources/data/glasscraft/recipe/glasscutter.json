@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "H": "glasscraft:glasscutter_head",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    "..H",
+    ".S.",
+    "S.."
+  ],
+  "result": {
+    "id": "glasscraft:glasscutter"
+  }
+}

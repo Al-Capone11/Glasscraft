@@ -1,0 +1,6 @@
+accessWidener	v2	official
+# CreativeModeTab.Output es public en el client jar pero el merged de Loom lo hereda
+# protected desde server; javac valida el acceso contra el atributo InnerClasses del
+# externo. Necesario para implementar DisplayItemsGenerator (pestaña creativa).
+accessible	class	net/minecraft/world/item/CreativeModeTab$Output
+accessible	class	net/minecraft/world/item/CreativeModeTab$TabVisibility

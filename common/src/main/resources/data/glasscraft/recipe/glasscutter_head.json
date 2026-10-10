@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "D": "minecraft:diamond",
+    "C": "minecraft:copper_ingot"
+  },
+  "pattern": [
+    ".ID",
+    ".II",
+    "C.."
+  ],
+  "result": {
+    "id": "glasscraft:glasscutter_head"
+  }
+}

@@ -8,5 +8,7 @@
   "glasscraft.config.glass_panes": "Glass panes",
   "glasscraft.config.tinted_glass": "Tinted glass",
   "glasscraft.config.glowstone": "Glowstone",
-  "glasscraft.config.sea_lantern": "Sea lantern"
+  "glasscraft.config.sea_lantern": "Sea lantern",
+  "item.glasscraft.glasscutter_head": "Glasscutter Head",
+  "itemGroup.glasscraft": "Glasscraft"
 }

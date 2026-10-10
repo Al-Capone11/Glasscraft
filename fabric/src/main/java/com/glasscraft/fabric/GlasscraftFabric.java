@@ -25,6 +25,7 @@ public class GlasscraftFabric implements ModInitializer {
         } catch (Exception ignored) {}
 
         GlasscraftItems.registerDirect();
+        com.glasscraft.common.init.GlasscraftCreativeTab.registerDirect();
 
         // Puente de guardado para la pantalla de config (ModMenu).
         com.glasscraft.common.client.GlasscraftConfigScreenHost.init(configFile, path -> {
