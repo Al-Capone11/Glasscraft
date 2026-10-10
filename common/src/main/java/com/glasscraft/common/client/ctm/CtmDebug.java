@@ -21,6 +21,7 @@ public final class CtmDebug {
     public static final AtomicLong quadsTotal = new AtomicLong();
 
     public static final java.util.concurrent.atomic.AtomicInteger dumpsRemaining = new java.util.concurrent.atomic.AtomicInteger(30);
+    public static final java.util.concurrent.atomic.AtomicInteger paneDumps = new java.util.concurrent.atomic.AtomicInteger(24);
 
     /** path de bloque -> veces que fue el estado del hook (solo primeros 200 paths). */
     public static final ConcurrentHashMap<String, AtomicLong> seenStates = new ConcurrentHashMap<>();
@@ -29,7 +30,7 @@ public final class CtmDebug {
     /** path con vecinos conectados. */
     public static final ConcurrentHashMap<String, AtomicLong> connectedStates = new ConcurrentHashMap<>();
 
-    private static volatile long lastLog;
+    private static final ConcurrentHashMap<String, Long> lastLogPerKey = new ConcurrentHashMap<>();
 
     private CtmDebug() {}
 
@@ -46,10 +47,11 @@ public final class CtmDebug {
         connectedStates.computeIfAbsent(path, k -> new AtomicLong()).incrementAndGet();
     }
 
-    public static synchronized void sample(String where) {
+    public static void sample(String where) {
         long now = System.currentTimeMillis();
-        if (now - lastLog < 5000) return;
-        lastLog = now;
+        long last = lastLogPerKey.getOrDefault(where, 0L);
+        if (now - last < 5000) return;
+        lastLogPerKey.put(where, now);
         LOGGER.info("[{}] begin={} active={} conn={} quadsMod={} estados={} activos={}",
             where, beginCalls.get(), activeBlocks.get(), maskNonZero.get(),
             quadsModified.get(), seenStates.size(), activeStates.size());

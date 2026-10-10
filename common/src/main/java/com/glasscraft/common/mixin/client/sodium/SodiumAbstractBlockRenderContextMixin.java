@@ -20,20 +20,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * CTM para el pipeline de terreno de Sodium 0.9.x.
  *
- * Dos reglas con garantia de seguridad (no pueden corromper texturas):
- * 1) CONTRACCION DIRECTA DEL LADO DEL SEAM: el vertice que esta en el borde
- *    con vecino conectado solo contrae si SU PROPIO u/v esta EXACTAMENTE en
- *    un borde del tile del sprite (u0/u1/v0/v1, tolerancia 1 texel). Contraer
- *    siempre mueve el muestreo HACIA DENTRO del tile: jamas muestrea fuera.
- *    (El emparejamiento anterior por direccion podia contraer el lado
- *    equivocado y desplazar la textura = "se ven mal".)
- * 2) EXCLUSION DE TAPAS SOLO PARA PANELES VANILLA REALES (isVanillaPane).
- *    OJO: el vidrio tiene canOcclude==false y NO es un panel — usar
- *    !canOcclude() como clasificador mataba las caras UP/DOWN de los
- *    bloques de vidrio ("no conectan desde arriba").
+ * EJES UV<->mundo por COVARIANZA least-squares (ronda 12): el eje y signo de
+ * U/V se derivan de los 4 vertices a la vez (cov(u, coordenada mundial)).
+ * La ronda anterior usaba el par max/min de UV — que es una DIAGONAL del
+ * quad — y en tiras de panel (7x16 mundo) la diagonal domina en Y: uAxis
+ * salia Y (mal) -> contracciones en el lado equivocado -> texturas sesgadas
+ * en Fabric y sin efecto visible en NeoForge. La covarianza es inmune al
+ * orden de vertices y a la diagonal: verificada contra dumps reales de
+ * brazo de panel (uAxis=Z, u crece hacia el norte) y cara up de cubo
+ * (uAxis=EAST, igual que la ronda que ya funcionaba).
  *
- * Eje U del quad DERIVADO (max-|dot| contra ambos tangentes). Posiciones
- * 0..1 (FaceBakery div(16), verificado bytecode).
+ * Garantias que se mantienen:
+ * - Un vertice solo contrae si su u/v esta EXACTAMENTE en un borde del tile
+ *   del sprite, y siempre hacia DENTRO del tile (imposible corromper).
+ * - Paneles vanilla reales (isVanillaPane): tapas up/down excluidas.
+ *   OJO: vidrio NO es panel (translucido, canOcclude=false).
+ *
+ * Modelo de panel vanilla verificado en el jar: brazo = elemento [7..9]x[0..16]
+ * con cara larga u=[9..16] del tile de VIDRIO (u=16 en la punta exterior);
+ * la linea de marco en la junta entre paneles conectados ES ese borde u=16
+ * del tile. Contraerlo cuando el vecino en esa direccion conecta = union.
  */
 @Mixin(net.caffeinemc.mods.sodium.client.render.model.AbstractBlockRenderContext.class)
 abstract class SodiumAbstractBlockRenderContextMixin {
@@ -63,9 +69,6 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         if (face == null) return;
 
         boolean realPane = CtmResolver.isVanillaPane(state);
-        // Tapas up/down: solo excluir PANELES REALES (el vidrio en bloque
-        // tiene canOcclude=false — la exclusion anterior le mataba su cara
-        // superior y nunca conectaba visto desde arriba).
         if (realPane && (face == Direction.UP || face == Direction.DOWN)) return;
 
         glasscraft$shrinkQuad(quad, face, mask, realPane);
@@ -83,19 +86,43 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         }
         center.mul(0.25f);
 
-        // Eje U del quad: derivar probando AMBOS ejes tangentes.
-        Direction.Axis normalAxis = face.getAxis();
-        Direction t1 = (normalAxis == Direction.Axis.X) ? Direction.SOUTH : Direction.EAST;
-        Direction t2 = (normalAxis == Direction.Axis.Y) ? Direction.SOUTH : Direction.UP;
-        int iMaxU = 0, iMinU = 0;
-        for (int i = 1; i < 4; i++) {
-            if (u[i] > u[iMaxU]) iMaxU = i;
-            if (u[i] < u[iMinU]) iMinU = i;
+        // ---- Ejes UV<->mundo por covarianza (least-squares, 4 vertices) ----
+        Direction.Axis nAx = face.getAxis();
+        Direction.Axis[] tan = new Direction.Axis[2];
+        int ti = 0;
+        for (Direction.Axis ax : Direction.Axis.values()) {
+            if (ax != nAx) tan[ti++] = ax;
         }
-        Vector3f du = new Vector3f(p[iMaxU]).sub(p[iMinU]);
-        float dU1 = du.dot(new Vector3f(t1.step()));
-        float dU2 = du.dot(new Vector3f(t2.step()));
-        Direction uAxis = (Math.abs(dU1) >= Math.abs(dU2)) ? t1 : t2;
+        float uMean = (u[0] + u[1] + u[2] + u[3]) * 0.25f;
+        float vMean = (v[0] + v[1] + v[2] + v[3]) * 0.25f;
+        float m0 = (coord(p[0], tan[0]) + coord(p[1], tan[0]) + coord(p[2], tan[0]) + coord(p[3], tan[0])) * 0.25f;
+        float m1 = (coord(p[0], tan[1]) + coord(p[1], tan[1]) + coord(p[2], tan[1]) + coord(p[3], tan[1])) * 0.25f;
+        float covU0 = 0, covU1 = 0, covV0 = 0, covV1 = 0;
+        for (int i = 0; i < 4; i++) {
+            float du = u[i] - uMean;
+            float dv = v[i] - vMean;
+            float d0 = coord(p[i], tan[0]) - m0;
+            float d1 = coord(p[i], tan[1]) - m1;
+            covU0 += du * d0;
+            covU1 += du * d1;
+            covV0 += dv * d0;
+            covV1 += dv * d1;
+        }
+        Direction uDir = null, vDir = null;
+        if (Math.abs(covU0) > 1e-12f || Math.abs(covU1) > 1e-12f) {
+            if (Math.abs(covU0) >= Math.abs(covU1)) {
+                uDir = covU0 >= 0 ? posDir(tan[0]) : posDir(tan[0]).getOpposite();
+            } else {
+                uDir = covU1 >= 0 ? posDir(tan[1]) : posDir(tan[1]).getOpposite();
+            }
+        }
+        if (Math.abs(covV0) > 1e-12f || Math.abs(covV1) > 1e-12f) {
+            if (Math.abs(covV0) >= Math.abs(covV1)) {
+                vDir = covV0 >= 0 ? posDir(tan[0]) : posDir(tan[0]).getOpposite();
+            } else {
+                vDir = covV1 >= 0 ? posDir(tan[1]) : posDir(tan[1]).getOpposite();
+            }
+        }
 
         TextureAtlasSprite sprite = quad.cachedSprite();
         if (sprite == null) return;
@@ -109,25 +136,20 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         float qvMin = Math.min(Math.min(v[0], v[1]), Math.min(v[2], v[3]));
         float qvMax = Math.max(Math.max(v[0], v[1]), Math.max(v[2], v[3]));
 
-        // DUMP con posiciones y decisiones (casos problematicos prioritarios).
+        // DUMP dedicado a paneles (presupuesto propio: los cubos no se lo comen).
         boolean doDump = false;
-        if (mask != 0 && CtmDebug.dumpsRemaining.get() > 0
-                && (realPane || face == Direction.UP || face == Direction.DOWN)) {
-            CtmDebug.dumpsRemaining.decrementAndGet();
+        if (realPane && CtmDebug.paneDumps.get() > 0) {
+            CtmDebug.paneDumps.decrementAndGet();
             doDump = true;
-            CtmDebug.LOGGER.info("[DUMP2] face={} pane={} sprite={} mask={}",
-                face, realPane, sprite.contents().name(), Integer.toBinaryString(mask));
+            CtmDebug.LOGGER.info("[PDUMP] face={} pane={} sprite={} uAx={} vAx={} mask={}",
+                face, realPane, sprite.contents().name(),
+                uDir, vDir, Integer.toBinaryString(mask));
+            CtmDebug.LOGGER.info("[PDUMP]  tile u=[{}/{}] v=[{}/{}] quad u=[{}/{}] v=[{}/{}]",
+                f(u0), f(u1), f(v0), f(v1), f(quMin), f(quMax), f(qvMin), f(qvMax));
             for (int i = 0; i < 4; i++) {
-                CtmDebug.LOGGER.info("[DUMP2]  v{} p=({},{},{}) uv=({},{})",
-                    i,
-                    String.format("%.3f", p[i].x), String.format("%.3f", p[i].y), String.format("%.3f", p[i].z),
-                    String.format("%.5f", u[i]), String.format("%.5f", v[i]));
+                CtmDebug.LOGGER.info("[PDUMP]  v{} p=({},{},{}) uv=({},{})",
+                    i, f(p[i].x), f(p[i].y), f(p[i].z), f(u[i]), f(v[i]));
             }
-            CtmDebug.LOGGER.info("[DUMP2]  tile u=[{}/{}] v=[{}/{}] quad u=[{}/{}] v=[{}/{}]",
-                String.format("%.5f", u0), String.format("%.5f", u1),
-                String.format("%.5f", v0), String.format("%.5f", v1),
-                String.format("%.5f", quMin), String.format("%.5f", quMax),
-                String.format("%.5f", qvMin), String.format("%.5f", qvMax));
         }
 
         float[] nu = new float[4], nv = new float[4];
@@ -136,30 +158,29 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         boolean changed = false;
         for (int i = 0; i < 4; i++) {
             Vector3f rel = new Vector3f(p[i]).sub(center);
+            boolean ch = false;
             for (Direction d : Direction.values()) {
-                if (d.getAxis() == normalAxis) continue;
+                if (d.getAxis() == nAx) continue;
                 if ((mask & (1 << d.ordinal())) == 0) continue;
                 if (rel.dot(new Vector3f(d.step())) <= 0) continue;
-                // Vertice en el borde que mira al vecino d: contraer su UV
-                // SOLO si su u/v esta en un borde del tile (mueve hacia dentro).
-                if (d.getAxis() == uAxis.getAxis()) {
-                    if (Math.abs(u[i] - quMax) < 1e-6f && quMax > u1 - su) {
-                        nu[i] = u[i] - su;
-                    } else if (Math.abs(u[i] - quMin) < 1e-6f && quMin < u0 + su) {
-                        nu[i] = u[i] + su;
+                if (uDir != null && d.getAxis() == uDir.getAxis()) {
+                    if (d == uDir) {
+                        if (u[i] == quMax && quMax > u1 - su) { nu[i] = u[i] - su; ch = true; }
+                    } else {
+                        if (u[i] == quMin && quMin < u0 + su) { nu[i] = u[i] + su; ch = true; }
                     }
-                } else {
-                    if (Math.abs(v[i] - qvMax) < 1e-6f && qvMax > v1 - sv) {
-                        nv[i] = v[i] - sv;
-                    } else if (Math.abs(v[i] - qvMin) < 1e-6f && qvMin < v0 + sv) {
-                        nv[i] = v[i] + sv;
+                } else if (vDir != null) {
+                    if (d == vDir) {
+                        if (v[i] == qvMax && qvMax > v1 - sv) { nv[i] = v[i] - sv; ch = true; }
+                    } else {
+                        if (v[i] == qvMin && qvMin < v0 + sv) { nv[i] = v[i] + sv; ch = true; }
                     }
                 }
             }
-            if (nu[i] != u[i] || nv[i] != v[i]) changed = true;
+            if (ch) changed = true;
         }
         if (!changed) {
-            if (doDump) CtmDebug.LOGGER.info("[DUMP2]  -> SIN cambio (vertices del seam no estan en borde de tile)");
+            if (doDump) CtmDebug.LOGGER.info("[PDUMP]  -> SIN cambio");
             return;
         }
         for (int i = 0; i < 4; i++) {
@@ -168,12 +189,29 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         quad.setAmbientOcclusion(TriState.FALSE);
         CtmDebug.quadsModified.incrementAndGet();
         if (doDump) {
-            CtmDebug.LOGGER.info("[DUMP2]  -> CONTRAIDO a uv=({},{}) ({},{}) ({},{}) ({},{})",
-                String.format("%.5f", nu[0]), String.format("%.5f", nv[0]),
-                String.format("%.5f", nu[1]), String.format("%.5f", nv[1]),
-                String.format("%.5f", nu[2]), String.format("%.5f", nv[2]),
-                String.format("%.5f", nu[3]), String.format("%.5f", nv[3]));
+            CtmDebug.LOGGER.info("[PDUMP]  -> CONTRAIDO uv=({},{}) ({},{}) ({},{}) ({},{})",
+                f(nu[0]), f(nv[0]), f(nu[1]), f(nv[1]), f(nu[2]), f(nv[2]), f(nu[3]), f(nv[3]));
         }
         CtmDebug.sample(realPane ? "pane" : "cube");
+    }
+
+    private static float coord(Vector3f p, Direction.Axis ax) {
+        return switch (ax) {
+            case X -> p.x;
+            case Y -> p.y;
+            case Z -> p.z;
+        };
+    }
+
+    private static Direction posDir(Direction.Axis ax) {
+        return switch (ax) {
+            case X -> Direction.EAST;
+            case Y -> Direction.UP;
+            case Z -> Direction.SOUTH;
+        };
+    }
+
+    private static String f(float x) {
+        return String.format("%.5f", x);
     }
 }
