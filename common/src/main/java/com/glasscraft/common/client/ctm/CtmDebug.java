@@ -23,6 +23,17 @@ public final class CtmDebug {
     public static final java.util.concurrent.atomic.AtomicInteger dumpsRemaining = new java.util.concurrent.atomic.AtomicInteger(30);
     public static final java.util.concurrent.atomic.AtomicInteger paneDumps = new java.util.concurrent.atomic.AtomicInteger(24);
 
+    /** Presupuesto de dumps por sprite: cada sprite distinto tiene los suyos. */
+    private static final ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger> spriteDumpBudgets = new ConcurrentHashMap<>();
+
+    public static int spriteDumpBudget(String sprite) {
+        return spriteDumpBudgets.computeIfAbsent(sprite, k -> new java.util.concurrent.atomic.AtomicInteger(12)).get();
+    }
+
+    public static void spendSpriteDump(String sprite) {
+        spriteDumpBudgets.get(sprite).decrementAndGet();
+    }
+
     /** path de bloque -> veces que fue el estado del hook (solo primeros 200 paths). */
     public static final ConcurrentHashMap<String, AtomicLong> seenStates = new ConcurrentHashMap<>();
     /** path de bloque que paso isEnabled. */

@@ -69,7 +69,15 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         if (face == null) return;
 
         boolean realPane = CtmResolver.isVanillaPane(state);
-        if (realPane && (face == Direction.UP || face == Direction.DOWN)) return;
+        if (realPane && (face == Direction.UP || face == Direction.DOWN)) {
+            // Panel apilado con vecino vertical conectado: la tapa es
+            // geometria INTERIOR del panel fusionado — no debe verse (se
+            // transparenta a traves del vidrio). Cancelar el quad entero.
+            if ((mask & (1 << face.ordinal())) != 0) {
+                ci.cancel();
+            }
+            return;
+        }
 
         glasscraft$shrinkQuad(quad, face, mask, realPane);
     }
@@ -138,11 +146,13 @@ abstract class SodiumAbstractBlockRenderContextMixin {
 
         // DUMP dedicado a paneles (presupuesto propio: los cubos no se lo comen).
         boolean doDump = false;
-        if (realPane && CtmDebug.paneDumps.get() > 0) {
-            CtmDebug.paneDumps.decrementAndGet();
+        String spriteName = sprite.contents().name().toString();
+        int budget = CtmDebug.spriteDumpBudget(spriteName);
+        if (realPane && budget > 0) {
+            CtmDebug.spendSpriteDump(spriteName);
             doDump = true;
             CtmDebug.LOGGER.info("[PDUMP] face={} pane={} sprite={} uAx={} vAx={} mask={}",
-                face, realPane, sprite.contents().name(),
+                face, realPane, spriteName,
                 uDir, vDir, Integer.toBinaryString(mask));
             CtmDebug.LOGGER.info("[PDUMP]  tile u=[{}/{}] v=[{}/{}] quad u=[{}/{}] v=[{}/{}]",
                 f(u0), f(u1), f(v0), f(v1), f(quMin), f(quMax), f(qvMin), f(qvMax));

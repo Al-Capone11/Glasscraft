@@ -54,6 +54,13 @@ public class GlasscraftConfigScreen extends Screen {
     @Override
     public void onClose() {
         GlasscraftConfigScreenHost.save();
+        // La continuidad se calcula al MESHAR la seccion: los chunks ya
+        // cacheados conservan los quads viejos hasta que se invalidan.
+        // resetLevelRenderData libera todos los buffers de secciones y el
+        // juego re-meshea todo con la config nueva (verificado javap).
+        if (this.minecraft != null && this.minecraft.levelRenderer != null) {
+            this.minecraft.levelRenderer.resetLevelRenderData();
+        }
         if (this.minecraft != null) {
             this.minecraft.gui.setScreen(this.parent);
         }
