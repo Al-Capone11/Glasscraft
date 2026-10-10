@@ -56,10 +56,17 @@ public class GlasscraftConfigScreen extends Screen {
         GlasscraftConfigScreenHost.save();
         // La continuidad se calcula al MESHAR la seccion: los chunks ya
         // cacheados conservan los quads viejos hasta que se invalidan.
-        // resetLevelRenderData libera todos los buffers de secciones y el
-        // juego re-meshea todo con la config nueva (verificado javap).
-        if (this.minecraft != null && this.minecraft.levelRenderer != null) {
-            this.minecraft.levelRenderer.resetLevelRenderData();
+        // invalidateCompiledGeometry es la llamada de vanilla para cambios
+        // visuales (mismo uso que Animaciones de mapa): recrea el ViewArea,
+        // limpia la cola y re-meshea todo SIN nullarlo. resetLevelRenderData
+        // dejaba viewArea=null y el frame siguiente crasheaba en
+        // repositionCamera (NPE verificado en ambos loaders).
+        if (this.minecraft != null && this.minecraft.levelRenderer != null && this.minecraft.level != null) {
+            this.minecraft.levelRenderer.invalidateCompiledGeometry(
+                this.minecraft.level,
+                this.minecraft.options,
+                this.minecraft.gameRenderer.mainCamera(),
+                this.minecraft.getBlockColors());
         }
         if (this.minecraft != null) {
             this.minecraft.gui.setScreen(this.parent);

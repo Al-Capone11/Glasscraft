@@ -74,8 +74,8 @@ abstract class SodiumAbstractBlockRenderContextMixin {
             try {
                 sName = (quad.cachedSprite() != null) ? quad.cachedSprite().contents().name().toString() : "NULL";
             } catch (Throwable t) { sName = "EX:" + t.getClass().getSimpleName(); }
-            CtmDebug.LOGGER.info("[PDUMP3] face={} cull={} sprite={}",
-                face, quad.getCullFace(), sName);
+            CtmDebug.LOGGER.info("[PDUMP3] ctx={} face={} cull={} sprite={}",
+                this.getClass().getSimpleName(), face, quad.getCullFace(), sName);
         }
 
         if (face == null) {
