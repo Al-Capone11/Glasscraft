@@ -6,9 +6,9 @@
     "S": "minecraft:stick"
   },
   "pattern": [
-    "..H",
-    ".S.",
-    "S.."
+    "  H",
+    " S ",
+    "S  "
   ],
   "result": {
     "id": "glasscraft:glasscutter"

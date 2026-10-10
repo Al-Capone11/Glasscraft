@@ -7,9 +7,9 @@
     "C": "minecraft:copper_ingot"
   },
   "pattern": [
-    ".ID",
-    ".II",
-    "C.."
+    " ID",
+    " II",
+    "C  "
   ],
   "result": {
     "id": "glasscraft:glasscutter_head"
