@@ -66,7 +66,22 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         if (mask == 0) return;
 
         Direction face = quad.getNominalFace();
-        if (face == null) return;
+
+        // PDUMP3: ANTES de cualquier descarte — que quads de paneles llegan a renderQuad
+        if (CtmResolver.isVanillaPane(state) && CtmDebug.entryDumps.get() > 0) {
+            CtmDebug.entryDumps.decrementAndGet();
+            String sName;
+            try {
+                sName = (quad.cachedSprite() != null) ? quad.cachedSprite().contents().name().toString() : "NULL";
+            } catch (Throwable t) { sName = "EX:" + t.getClass().getSimpleName(); }
+            CtmDebug.LOGGER.info("[PDUMP3] face={} cull={} sprite={}",
+                face, quad.getCullFace(), sName);
+        }
+
+        if (face == null) {
+            if (CtmResolver.isVanillaPane(state)) CtmDebug.nullFacePanels.incrementAndGet();
+            return;
+        }
 
         boolean realPane = CtmResolver.isVanillaPane(state);
         if (realPane && (face == Direction.UP || face == Direction.DOWN)) {

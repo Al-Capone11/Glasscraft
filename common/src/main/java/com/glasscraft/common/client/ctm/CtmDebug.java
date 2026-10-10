@@ -26,6 +26,9 @@ public final class CtmDebug {
     /** Presupuesto de dumps por sprite: cada sprite distinto tiene los suyos. */
     private static final ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger> spriteDumpBudgets = new ConcurrentHashMap<>();
 
+    public static final java.util.concurrent.atomic.AtomicInteger entryDumps = new java.util.concurrent.atomic.AtomicInteger(40);
+    public static final java.util.concurrent.atomic.AtomicLong nullFacePanels = new java.util.concurrent.atomic.AtomicLong();
+
     public static int spriteDumpBudget(String sprite) {
         return spriteDumpBudgets.computeIfAbsent(sprite, k -> new java.util.concurrent.atomic.AtomicInteger(12)).get();
     }
