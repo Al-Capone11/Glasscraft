@@ -84,11 +84,10 @@ abstract class SodiumAbstractBlockRenderContextMixin {
             return;
         }
 
-        boolean cleanGlass = CtmResolver.cleanGlassActive(state);
-        glasscraft$shrinkQuad(quad, face, mask, realPane, cleanGlass);
+        glasscraft$shrinkQuad(quad, face, mask, realPane);
     }
 
-    private void glasscraft$shrinkQuad(MutableQuadViewImpl quad, Direction face, int mask, boolean realPane, boolean cleanGlass) {
+    private void glasscraft$shrinkQuad(MutableQuadViewImpl quad, Direction face, int mask, boolean realPane) {
         float[] u = new float[4], v = new float[4];
         Vector3f[] p = new Vector3f[4];
         Vector3f center = new Vector3f();
@@ -141,10 +140,10 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         TextureAtlasSprite sprite = quad.cachedSprite();
         if (sprite == null) return;
 
-        // "Cristal limpio" (opcional): sustituir el sprite de vidrio por su
-        // variante limpia (marco con SU color, interior transparente) y
-        // remapear las UVs del atlas (mismo tamano de tile).
-        if (cleanGlass && CtmResolver.cleanGlassActive(state)) {
+        // Override de sprite en bloques conectados: cristal limpio (vidrios,
+        // config cleanGlass) y linterna marina (config seaLantern — su borde
+        // de 2px sombreado aparece como linea en cada junta).
+        if (CtmResolver.spriteOverrideActive(state)) {
             String blockPath = state.getBlock().builtInRegistryHolder().key()
                 .identifier().getPath();
             TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath);

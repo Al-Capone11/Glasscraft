@@ -29,14 +29,14 @@ public final class CtmUvShrink {
      * Devuelve el quad original si no hay que tocar nada.
      */
     public static BakedQuad shrinkIfConnected(BakedQuad quad, Direction face, int connectionMask,
-                                              boolean cleanGlass, BlockState state) {
+                                              boolean unused, BlockState state) {
         if (connectionMask == 0) return quad;
 
         TextureAtlasSprite sprite = quad.materialInfo().sprite();
 
-        // "Cristal limpio": sustituir por la variante limpia del color del bloque.
+        // Override de sprite: cristal limpio (vidrios) y linterna marina.
         BakedQuad.MaterialInfo info = quad.materialInfo();
-        if (cleanGlass && CtmResolver.cleanGlassActive(state)) {
+        if (CtmResolver.spriteOverrideActive(state)) {
             String blockPath = state.getBlock().builtInRegistryHolder().key()
                 .identifier().getPath();
             TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath);

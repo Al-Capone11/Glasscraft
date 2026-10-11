@@ -62,6 +62,30 @@ public final class CtmResolver {
     }
 
     /**
+     * Override de sprite para eliminar bordes sombreados en bloques conectados.
+     * Vidrios: cuando cleanGlass esta activo. Linterna marina: cuando su
+     * continuidad esta activa (el borde oscuro de 2px de la textura aparece
+     * como linea en cada junta — el shrink de 1px no alcanza a taparlo).
+     */
+    public static boolean spriteOverrideActive(BlockState state) {
+        Identifier id = state.getBlock().builtInRegistryHolder().key().identifier();
+        if ("minecraft".equals(id.getNamespace()) && "sea_lantern".equals(id.getPath())) {
+            return Glasscraft.config().continuity.enabled
+                && Glasscraft.config().continuity.seaLantern;
+        }
+        return Glasscraft.config().continuity.cleanGlass
+            && isVanillaGlassLike(state, id);
+    }
+
+    private static boolean isVanillaGlassLike(BlockState state, Identifier id) {
+        if (!"minecraft".equals(id.getNamespace())) return false;
+        String path = id.getPath();
+        return "glass".equals(path) || "tinted_glass".equals(path)
+            || path.endsWith("_stained_glass") || path.endsWith("_stained_glass_pane")
+            || path.equals("glass_pane");
+    }
+
+    /**
      * Paneles vanilla: sus UVs son tiras sub-tile del atlas; la contraccion
      * full-tile los distorsionaria. Quedan fuera del CTM por ahora.
      */

@@ -57,9 +57,8 @@ abstract class ModelBlockRendererMixin {
         if (quad.direction() == null) return quad; // quads internos/postes
         int mask = ctx.mask();
         if (mask == 0) return quad;
-        boolean cleanGlass = com.glasscraft.common.Glasscraft.config().continuity.cleanGlass;
         BakedQuad shrunk = CtmUvShrink.shrinkIfConnected(quad, quad.direction(), mask,
-            cleanGlass, ctx.state);
+            false, ctx.state);
         return shrunk;
     }
 }
