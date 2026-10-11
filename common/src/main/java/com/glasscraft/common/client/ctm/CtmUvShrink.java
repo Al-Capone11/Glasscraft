@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
+import com.glasscraft.common.Glasscraft;
 
 /**
  * Contraccion de UVs estilo OptiFine "glass.ctm": cuando la cara de un bloque
@@ -27,10 +28,33 @@ public final class CtmUvShrink {
      * Reconstruye el quad con UVs contraidas si la cara 'dir' conecta.
      * Devuelve el quad original si no hay que tocar nada.
      */
-    public static BakedQuad shrinkIfConnected(BakedQuad quad, Direction face, int connectionMask) {
+    public static BakedQuad shrinkIfConnected(BakedQuad quad, Direction face, int connectionMask,
+                                              boolean cleanGlass, BlockState state) {
         if (connectionMask == 0) return quad;
 
         TextureAtlasSprite sprite = quad.materialInfo().sprite();
+
+        // "Cristal limpio": sustituir el sprite de vidrio por el marco transparente.
+        BakedQuad.MaterialInfo info = quad.materialInfo();
+        if (cleanGlass && CtmResolver.cleanGlassActive(state)) {
+            TextureAtlasSprite clean = CleanGlassSprite.get();
+            if (clean != null && clean != sprite) {
+                info = new BakedQuad.MaterialInfo(clean, info.layer(), info.itemRenderType(),
+                    info.tintIndex(), info.shade(), info.lightEmission());
+                // remapear UVs del atlas al nuevo tile (mismo tamano)
+                float[] uArr = new float[4], vArr = new float[4];
+                long[] packed = {quad.packedUV0(), quad.packedUV1(), quad.packedUV2(), quad.packedUV3()};
+                for (int i = 0; i < 4; i++) {
+                    uArr[i] = clean.getU0() + (UVPair.unpackU(packed[i]) - sprite.getU0());
+                    vArr[i] = clean.getV0() + (UVPair.unpackV(packed[i]) - sprite.getV0());
+                    packed[i] = UVPair.pack(uArr[i], vArr[i]);
+                }
+                quad = new BakedQuad(quad.position0(), quad.position1(), quad.position2(), quad.position3(),
+                    packed[0], packed[1], packed[2], packed[3], quad.direction(), info);
+                sprite = clean;
+            }
+        }
+
         float u0 = sprite.getU0(), u1 = sprite.getU1();
         float v0 = sprite.getV0(), v1 = sprite.getV1();
 
@@ -58,7 +82,7 @@ public final class CtmUvShrink {
             UVPair.pack(remapU(quad.packedUV1(), u0, u1, nu0, nu1), remapV(quad.packedUV1(), v0, v1, nv0, nv1)),
             UVPair.pack(remapU(quad.packedUV2(), u0, u1, nu0, nu1), remapV(quad.packedUV2(), v0, v1, nv0, nv1)),
             UVPair.pack(remapU(quad.packedUV3(), u0, u1, nu0, nu1), remapV(quad.packedUV3(), v0, v1, nv0, nv1)),
-            quad.direction(), quad.materialInfo());
+            quad.direction(), info);
     }
 
     /** Reempaqueta U del rango original del tile al rango contraido. */

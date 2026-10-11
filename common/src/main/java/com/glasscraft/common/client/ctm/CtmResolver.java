@@ -46,6 +46,22 @@ public final class CtmResolver {
     }
 
     /**
+     * "Cristal limpio": bloques cuyo sprite base se sustituye por
+     * glasscraft:block/clean_glass al conectar (solo vidrios vanilla — el
+     * vidrio tintado tiene textura propia de vidrio, los paneles usan el
+     * mismo sprite de vidrio que los bloques).
+     */
+    public static boolean cleanGlassActive(BlockState state) {
+        if (!Glasscraft.config().continuity.cleanGlass) return false;
+        Identifier id = state.getBlock().builtInRegistryHolder().key().identifier();
+        if (!"minecraft".equals(id.getNamespace())) return false;
+        String path = id.getPath();
+        return "glass".equals(path) || "tinted_glass".equals(path)
+            || path.endsWith("_stained_glass") || path.endsWith("_stained_glass_pane")
+            || path.equals("glass_pane");
+    }
+
+    /**
      * Paneles vanilla: sus UVs son tiras sub-tile del atlas; la contraccion
      * full-tile los distorsionaria. Quedan fuera del CTM por ahora.
      */

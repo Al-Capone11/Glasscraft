@@ -108,6 +108,9 @@ public class GlasscraftConfigScreen extends Screen {
         def("glasscraft.config.sea_lantern",
             () -> Glasscraft.config().continuity.seaLantern,
             v -> Glasscraft.config().continuity.seaLantern = v),
+        def("glasscraft.config.clean_glass",
+            () -> Glasscraft.config().continuity.cleanGlass,
+            v -> Glasscraft.config().continuity.cleanGlass = v),
     };
 
     private static ToggleDef def(String key, java.util.function.Supplier<Boolean> getter,

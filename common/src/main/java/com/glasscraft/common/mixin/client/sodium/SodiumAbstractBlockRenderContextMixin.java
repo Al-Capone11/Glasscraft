@@ -1,5 +1,6 @@
 package com.glasscraft.common.mixin.client.sodium;
 
+import com.glasscraft.common.client.ctm.CleanGlassSprite;
 import com.glasscraft.common.client.ctm.CtmContext;
 import com.glasscraft.common.client.ctm.CtmResolver;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
@@ -83,10 +84,11 @@ abstract class SodiumAbstractBlockRenderContextMixin {
             return;
         }
 
-        glasscraft$shrinkQuad(quad, face, mask, realPane);
+        boolean cleanGlass = CtmResolver.cleanGlassActive(state);
+        glasscraft$shrinkQuad(quad, face, mask, realPane, cleanGlass);
     }
 
-    private void glasscraft$shrinkQuad(MutableQuadViewImpl quad, Direction face, int mask, boolean realPane) {
+    private void glasscraft$shrinkQuad(MutableQuadViewImpl quad, Direction face, int mask, boolean realPane, boolean cleanGlass) {
         float[] u = new float[4], v = new float[4];
         Vector3f[] p = new Vector3f[4];
         Vector3f center = new Vector3f();
@@ -138,6 +140,22 @@ abstract class SodiumAbstractBlockRenderContextMixin {
 
         TextureAtlasSprite sprite = quad.cachedSprite();
         if (sprite == null) return;
+
+        // "Cristal limpio" (opcional): sustituir el sprite de vidrio por el marco
+        // transparente glasscraft:block/clean_glass y remapear las UVs del atlas
+        // (mismo tamano de tile => uv_new = u0_new + (uv - u0_old)).
+        if (cleanGlass && CtmResolver.cleanGlassActive(state)) {
+            TextureAtlasSprite clean = CleanGlassSprite.get();
+            if (clean != null && clean != sprite) {
+                for (int i = 0; i < 4; i++) {
+                    u[i] = clean.getU0() + (u[i] - sprite.getU0());
+                    v[i] = clean.getV0() + (v[i] - sprite.getV0());
+                    quad.setUV(i, u[i], v[i]);
+                }
+                sprite = clean;
+            }
+        }
+
         float su = (sprite.getU1() - sprite.getU0()) / 16.0f;
         float sv = (sprite.getV1() - sprite.getV0()) / 16.0f;
         float u0 = sprite.getU0(), u1 = sprite.getU1();

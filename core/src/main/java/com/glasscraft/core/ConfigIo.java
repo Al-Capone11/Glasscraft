@@ -40,6 +40,7 @@ public final class ConfigIo {
                 c.tintedGlass = bool(cont, "tintedGlass", c.tintedGlass);
                 c.glowstone = bool(cont, "glowstone", c.glowstone);
                 c.seaLantern = bool(cont, "seaLantern", c.seaLantern);
+                c.cleanGlass = bool(cont, "cleanGlass", c.cleanGlass);
                 strings(cont, "blockAllowlist").forEach(c.blockAllowlist::add);
                 strings(cont, "blockDenylist").forEach(c.blockDenylist::add);
                 if (cont.has("byMod") && cont.get("byMod").isJsonObject()) {

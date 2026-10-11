@@ -36,6 +36,13 @@ public final class GlasscraftConfig {
         public boolean tintedGlass = true;
         public boolean glowstone = true;
         public boolean seaLantern = true;
+        /**
+         * "Cristal limpio": al conectar vidrios vanilla, sustituye el sprite por
+         * glasscraft:block/clean_glass (solo marco; interior transparente) en
+         * vez del vidrio con su destello interior. Solo afecta al vidrio
+         * (bloques y paneles), no a glowstone/linternas.
+         */
+        public boolean cleanGlass = true;
         /** Continuidad por mod (id de mod -> activada). Mods no listados usan 'enabled' global. */
         public final Map<String, Boolean> byMod = new LinkedHashMap<>();
         /** Bloques concretos que SIEMPRE reciben continuidad (namespace:path). */
