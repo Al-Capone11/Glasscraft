@@ -80,10 +80,18 @@ public final class CleanGlassSprite {
      * flat=false: variante con marco (los limites del grupo conservan contorno).
      * Devuelve null si el path no tiene variante o la resolucion fallo.
      */
-    public static TextureAtlasSprite getFor(String blockPath, boolean flat) {
+    /**
+     * Sprite limpio para el path de un bloque vanilla, para la mascara de lados
+     * CONECTADOS de la cara (bits N=1, E=2, S=4, W=8 en el marco de la CARA).
+     * Cada lado conectado elimina SU marco en el tile (variante por lado, 16 en
+     * total): inmune a mipmaps a distancia porque el tile es seamless en sus
+     * lados conectados — no hay marco que promediar en mips superiores.
+     * Devuelve null si el path no tiene variante o la resolucion fallo.
+     */
+    public static TextureAtlasSprite getFor(String blockPath, int faceMask) {
         String spritePath = PATH_MAP.get(blockPath);
         if (spritePath == null) return null;
-        if (flat) spritePath = spritePath + "_flat";
+        spritePath = spritePath + "_" + (faceMask & 0xF);
         TextureAtlasSprite hit = CACHE.get(spritePath);
         if (hit != null) return hit;
         if (Boolean.TRUE.equals(FAILED.get(spritePath))) return null;

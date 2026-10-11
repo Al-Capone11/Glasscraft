@@ -35,7 +35,8 @@ public final class CtmUvShrink {
         TextureAtlasSprite sprite = quad.materialInfo().sprite();
 
         // Override de sprite: cristal limpio (vidrios) y linterna marina.
-        // Cara totalmente rodeada -> variante _flat (sin marco, inmune a mips).
+        // Variante POR LADO (16 combinaciones): cada lado conectado de la cara
+        // elimina SU marco — seamless, inmune a mipmaps a distancia.
         BakedQuad.MaterialInfo info = quad.materialInfo();
         if (CtmResolver.spriteOverrideActive(state)) {
             String blockPath = state.getBlock().builtInRegistryHolder().key()
@@ -44,8 +45,12 @@ public final class CtmUvShrink {
             boolean down = connects(connectionMask, downOf(face));
             boolean left = connects(connectionMask, leftOf(face));
             boolean right = connects(connectionMask, rightOf(face));
-            boolean flat = up && down && left && right;
-            TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath, flat);
+            int faceMask = 0;
+            if (up) faceMask |= 1;
+            if (right) faceMask |= 2;
+            if (down) faceMask |= 4;
+            if (left) faceMask |= 8;
+            TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath, faceMask);
             if (clean != null && clean != sprite) {
                 info = new BakedQuad.MaterialInfo(clean, info.layer(), info.itemRenderType(),
                     info.tintIndex(), info.shade(), info.lightEmission());

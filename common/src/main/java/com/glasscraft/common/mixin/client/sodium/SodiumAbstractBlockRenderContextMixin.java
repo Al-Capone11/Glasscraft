@@ -140,20 +140,26 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         TextureAtlasSprite sprite = quad.cachedSprite();
         if (sprite == null) return;
 
-        // Override de sprite en bloques conectados: cristal limpio (vidrios,
-        // config cleanGlass) y linterna marina (config seaLantern). Si la cara
-        // conecta por TODOS sus lados tangentes se usa la variante _flat (sin
-        // marco): el marco de 1px se promedia dentro del tile en los mips de
-        // distancia y reaparece como rejilla — flat es inmune a eso.
+        // Override de sprite en bloques conectados (cristal limpio + linterna):
+        // variante POR LADO (16 combinaciones) — cada lado conectado elimina SU
+        // marco en el tile. Inmune a mipmaps: el tile es seamless en sus lados
+        // conectados, no hay marco que promediar en mips de distancia.
+        // Mascara del marco del tile: N=arriba(V+), E=derecha(U+), S=abajo, W=izq.
         if (CtmResolver.spriteOverrideActive(state)) {
             String blockPath = state.getBlock().builtInRegistryHolder().key()
                 .identifier().getPath();
-            boolean flat = true;
-            for (Direction d : Direction.values()) {
-                if (d.getAxis() == nAx) continue;
-                if ((mask & (1 << d.ordinal())) == 0) { flat = false; break; }
+            int faceMask = 0;
+            if (uDir != null && vDir != null) {
+                // Convencion verificada en dumps reales (ronda 12): el vertice con
+                // v MENOR (v0 del tile, borde superior de la textura) esta ARRIBA en
+                // el mundo — V del tile crece hacia abajo. El lado "N" del tile
+                // (superior de la textura) apunta hacia -vDir.
+                if ((mask & (1 << vDir.getOpposite().ordinal())) != 0) faceMask |= 1; // N
+                if ((mask & (1 << vDir.ordinal())) != 0) faceMask |= 4;              // S
+                if ((mask & (1 << uDir.ordinal())) != 0) faceMask |= 2;              // E
+                if ((mask & (1 << uDir.getOpposite().ordinal())) != 0) faceMask |= 8; // W
             }
-            TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath, flat);
+            TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath, faceMask);
             if (clean != null && clean != sprite) {
                 for (int i = 0; i < 4; i++) {
                     u[i] = clean.getU0() + (u[i] - sprite.getU0());
