@@ -28,8 +28,12 @@ public final class CleanGlassSprite {
             if (resolved) return cached;
             try {
                 Minecraft mc = Minecraft.getInstance();
+                // OJO: la clave del AtlasManager es el ID de la DEFINICION del atlas
+                // (AtlasIds.BLOCKS = "blocks"), NO la textura (LOCATION_BLOCKS =
+                // "textures/atlas/blocks.png") — getAtlasOrThrow con la textura lanza
+                // IllegalArgumentException "Invalid atlas id" (visto en log real).
                 TextureAtlas atlas = mc.getAtlasManager()
-                    .getAtlasOrThrow(TextureAtlas.LOCATION_BLOCKS);
+                    .getAtlasOrThrow(net.minecraft.data.AtlasIds.BLOCKS);
                 TextureAtlasSprite s = atlas.getSprite(Identifier.fromNamespaceAndPath(
                     "glasscraft", "block/clean_glass"));
                 // Sprite "missing" de vanilla: ficha magenta/blanca con u0==v0==0 y
