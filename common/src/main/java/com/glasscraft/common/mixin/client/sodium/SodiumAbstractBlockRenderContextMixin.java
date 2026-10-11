@@ -141,11 +141,13 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         TextureAtlasSprite sprite = quad.cachedSprite();
         if (sprite == null) return;
 
-        // "Cristal limpio" (opcional): sustituir el sprite de vidrio por el marco
-        // transparente glasscraft:block/clean_glass y remapear las UVs del atlas
-        // (mismo tamano de tile => uv_new = u0_new + (uv - u0_old)).
+        // "Cristal limpio" (opcional): sustituir el sprite de vidrio por su
+        // variante limpia (marco con SU color, interior transparente) y
+        // remapear las UVs del atlas (mismo tamano de tile).
         if (cleanGlass && CtmResolver.cleanGlassActive(state)) {
-            TextureAtlasSprite clean = CleanGlassSprite.get();
+            String blockPath = state.getBlock().builtInRegistryHolder().key()
+                .identifier().getPath();
+            TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath);
             if (clean != null && clean != sprite) {
                 for (int i = 0; i < 4; i++) {
                     u[i] = clean.getU0() + (u[i] - sprite.getU0());

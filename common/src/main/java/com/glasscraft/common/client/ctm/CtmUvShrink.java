@@ -34,10 +34,12 @@ public final class CtmUvShrink {
 
         TextureAtlasSprite sprite = quad.materialInfo().sprite();
 
-        // "Cristal limpio": sustituir el sprite de vidrio por el marco transparente.
+        // "Cristal limpio": sustituir por la variante limpia del color del bloque.
         BakedQuad.MaterialInfo info = quad.materialInfo();
         if (cleanGlass && CtmResolver.cleanGlassActive(state)) {
-            TextureAtlasSprite clean = CleanGlassSprite.get();
+            String blockPath = state.getBlock().builtInRegistryHolder().key()
+                .identifier().getPath();
+            TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath);
             if (clean != null && clean != sprite) {
                 info = new BakedQuad.MaterialInfo(clean, info.layer(), info.itemRenderType(),
                     info.tintIndex(), info.shade(), info.lightEmission());

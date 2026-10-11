@@ -5,63 +5,107 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
- * Sprite "cristal limpio" (glasscraft:block/clean_glass): solo el marco de
- * 1px del tile, interior transparente. Resolucion cacheada del atlas de
- * bloques; el meshing de chunks corre en hilos de compilacion, asi que la
- * primera resolucion se hace en el hilo render y se cachea (volatile).
+ * Sprites "cristal limpio" (glasscraft:block/clean_*): el marco de 1px del tile
+ * con SU color original, interior 100% transparente. Un sprite por tipo de
+ * vidrio (clean_glass, clean_blue_stained_glass, ...) — los teñidos tienen el
+ * color PRE-COREADO en su textura, un sprite unico les robaba el color.
+ *
+ * Resolucion cacheada por path; el meshing de chunks corre en hilos de
+ * compilacion, la primera resolucion cachea (volatile + mapa por path).
  */
 public final class CleanGlassSprite {
 
     private static final org.slf4j.Logger LOGGER =
         org.slf4j.LoggerFactory.getLogger("GlasscraftCTM");
 
-    private static volatile TextureAtlasSprite cached;
-    private static volatile boolean resolved;
+    /** path del bloque vanilla -> path del sprite limpio glasscraft. */
+    private static final Map<String, String> PATH_MAP = Map.of(
+        "glass", "clean_glass",
+        "tinted_glass", "clean_tinted_glass",
+        "glass_pane", "clean_glass",
+        "white_stained_glass", "clean_white_stained_glass",
+        "orange_stained_glass", "clean_orange_stained_glass",
+        "magenta_stained_glass", "clean_magenta_stained_glass",
+        "light_blue_stained_glass", "clean_light_blue_stained_glass",
+        "yellow_stained_glass", "clean_yellow_stained_glass",
+        "lime_stained_glass", "clean_lime_stained_glass",
+        "pink_stained_glass", "clean_pink_stained_glass",
+        "gray_stained_glass", "clean_gray_stained_glass",
+        "light_gray_stained_glass", "clean_light_gray_stained_glass",
+        "cyan_stained_glass", "clean_cyan_stained_glass",
+        "purple_stained_glass", "clean_purple_stained_glass",
+        "blue_stained_glass", "clean_blue_stained_glass",
+        "brown_stained_glass", "clean_brown_stained_glass",
+        "green_stained_glass", "clean_green_stained_glass",
+        "red_stained_glass", "clean_red_stained_glass",
+        "black_stained_glass", "clean_black_stained_glass",
+        "white_stained_glass_pane", "clean_white_stained_glass",
+        "orange_stained_glass_pane", "clean_orange_stained_glass",
+        "magenta_stained_glass_pane", "clean_magenta_stained_glass",
+        "light_blue_stained_glass_pane", "clean_light_blue_stained_glass",
+        "yellow_stained_glass_pane", "clean_yellow_stained_glass",
+        "lime_stained_glass_pane", "clean_lime_stained_glass",
+        "pink_stained_glass_pane", "clean_pink_stained_glass",
+        "gray_stained_glass_pane", "clean_gray_stained_glass",
+        "light_gray_stained_glass_pane", "clean_light_gray_stained_glass",
+        "cyan_stained_glass_pane", "clean_cyan_stained_glass",
+        "purple_stained_glass_pane", "clean_purple_stained_glass",
+        "blue_stained_glass_pane", "clean_blue_stained_glass",
+        "brown_stained_glass_pane", "clean_brown_stained_glass",
+        "green_stained_glass_pane", "clean_green_stained_glass",
+        "red_stained_glass_pane", "clean_red_stained_glass",
+        "black_stained_glass_pane", "clean_black_stained_glass"
+    );
+
+    private static final Map<String, TextureAtlasSprite> CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, Boolean> FAILED = new ConcurrentHashMap<>();
     private static int loggedErrors;
 
     private CleanGlassSprite() {}
 
-    public static TextureAtlasSprite get() {
-        if (resolved) return cached;
-        synchronized (CleanGlassSprite.class) {
-            if (resolved) return cached;
-            try {
-                Minecraft mc = Minecraft.getInstance();
-                // OJO: la clave del AtlasManager es el ID de la DEFINICION del atlas
-                // (AtlasIds.BLOCKS = "blocks"), NO la textura (LOCATION_BLOCKS =
-                // "textures/atlas/blocks.png") — getAtlasOrThrow con la textura lanza
-                // IllegalArgumentException "Invalid atlas id" (visto en log real).
-                TextureAtlas atlas = mc.getAtlasManager()
-                    .getAtlasOrThrow(net.minecraft.data.AtlasIds.BLOCKS);
-                TextureAtlasSprite s = atlas.getSprite(Identifier.fromNamespaceAndPath(
-                    "glasscraft", "block/clean_glass"));
-                // Sprite "missing" de vanilla: ficha magenta/blanca con u0==v0==0 y
-                // tamano igual al del atlas entero en algunos casos; detectarlo por
-                // nombre (missingno) para no usarlo por error.
-                if (s != null && !s.contents().name().getPath().contains("missingno")) {
-                    cached = s;
-                    resolved = true;
-                    LOGGER.info("[CLEAN] sprite resuelto: {}", s.contents().name());
-                } else if (s != null && loggedErrors < 3) {
-                    loggedErrors++;
-                    LOGGER.warn("[CLEAN] getSprite devolvio el sprite missing — clean_glass NO esta stitches en el atlas");
-                }
-            } catch (Throwable t) {
-                if (loggedErrors < 3) {
-                    loggedErrors++;
-                    LOGGER.warn("[CLEAN] no se pudo resolver el sprite: {}", t.toString());
-                }
+    /**
+     * Sprite limpio para el path de un bloque de vidrio vanilla.
+     * Devuelve null si el path no tiene variante o la resolucion fallo.
+     */
+    public static TextureAtlasSprite getFor(String blockPath) {
+        String spritePath = PATH_MAP.get(blockPath);
+        if (spritePath == null) return null;
+        TextureAtlasSprite hit = CACHE.get(spritePath);
+        if (hit != null) return hit;
+        if (Boolean.TRUE.equals(FAILED.get(spritePath))) return null;
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            // Clave del AtlasManager = ID de DEFINICION del atlas (AtlasIds.BLOCKS),
+            // no la textura (LOCATION_BLOCKS) — esta ultima lanza IllegalArgumentException.
+            TextureAtlas atlas = mc.getAtlasManager()
+                .getAtlasOrThrow(net.minecraft.data.AtlasIds.BLOCKS);
+            TextureAtlasSprite s = atlas.getSprite(Identifier.fromNamespaceAndPath(
+                "glasscraft", "block/" + spritePath));
+            if (s != null && !s.contents().name().getPath().contains("missingno")) {
+                CACHE.put(spritePath, s);
+                return s;
             }
-            return cached;
+            if (loggedErrors < 3) {
+                loggedErrors++;
+                LOGGER.warn("[CLEAN] sprite missing para {}: {}", blockPath, spritePath);
+            }
+            FAILED.put(spritePath, Boolean.TRUE);
+        } catch (Throwable t) {
+            if (loggedErrors < 3) {
+                loggedErrors++;
+                LOGGER.warn("[CLEAN] error resolviendo {}: {}", blockPath, t.toString());
+            }
         }
+        return null;
     }
 
     /** Invalidar tras un reload de recursos. */
     public static void invalidate() {
-        synchronized (CleanGlassSprite.class) {
-            resolved = false;
-            cached = null;
-        }
+        CACHE.clear();
+        FAILED.clear();
     }
 }
