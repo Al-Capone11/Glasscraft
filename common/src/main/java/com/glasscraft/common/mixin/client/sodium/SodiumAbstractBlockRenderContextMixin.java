@@ -79,8 +79,13 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         }
 
         if (face == null) {
-            if (CtmResolver.isVanillaPane(state)) CtmDebug.nullFacePanels.incrementAndGet();
-            return;
+            // NeoForge: el emisor de modelos entrega quads de panel SIN nominalFace
+            // (37/40 en runtime, verificado PDUMP3; Fabric los 40 con cara). En vez
+            // de depender del emisor, se DERIVA de la geometria — mismo metodo que
+            // vanilla FaceBakery.calculateFacing: normal del winding -> eje dominante.
+            face = glasscraft$deriveFace(quad);
+            if (face == null) return;
+            CtmDebug.derivedFaces.incrementAndGet();
         }
 
         boolean realPane = CtmResolver.isVanillaPane(state);
@@ -218,6 +223,24 @@ abstract class SodiumAbstractBlockRenderContextMixin {
                 f(nu[0]), f(nv[0]), f(nu[1]), f(nv[1]), f(nu[2]), f(nv[2]), f(nu[3]), f(nv[3]));
         }
         CtmDebug.sample(realPane ? "pane" : "cube");
+    }
+
+    /**
+     * Cara nominal derivada de la geometria del quad (identico a vanilla
+     * FaceBakery.calculateFacing + findClosestDirection): normal del winding
+     * v0->v1->v2, eje dominante con signo. Inmune al emisor.
+     */
+    private static Direction glasscraft$deriveFace(MutableQuadViewImpl quad) {
+        Vector3f v0 = new Vector3f(quad.getX(0), quad.getY(0), quad.getZ(0));
+        Vector3f v1 = new Vector3f(quad.getX(1), quad.getY(1), quad.getZ(1));
+        Vector3f v2 = new Vector3f(quad.getX(2), quad.getY(2), quad.getZ(2));
+        Vector3f n = new Vector3f();
+        org.joml.GeometryUtils.normal(v0, v1, v2, n);
+        float ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z);
+        if (ax < 1e-9f && ay < 1e-9f && az < 1e-9f) return null; // degenerado
+        if (ax >= ay && ax >= az) return n.x >= 0 ? Direction.EAST : Direction.WEST;
+        if (ay >= ax && ay >= az) return n.y >= 0 ? Direction.UP : Direction.DOWN;
+        return n.z >= 0 ? Direction.SOUTH : Direction.NORTH;
     }
 
     private static float coord(Vector3f p, Direction.Axis ax) {
