@@ -7,14 +7,18 @@ import net.minecraft.resources.Identifier;
 
 /**
  * Sprite "cristal limpio" (glasscraft:block/clean_glass): solo el marco de
- * 1px del tile, interior transparente. Se resuelve del atlas de bloques con
- * cache invalidable — tras un reload de recursos (F3+T) hay que volver a
- * resolverlo porque el atlas se re-stitching.
+ * 1px del tile, interior transparente. Resolucion cacheada del atlas de
+ * bloques; el meshing de chunks corre en hilos de compilacion, asi que la
+ * primera resolucion se hace en el hilo render y se cachea (volatile).
  */
 public final class CleanGlassSprite {
 
+    private static final org.slf4j.Logger LOGGER =
+        org.slf4j.LoggerFactory.getLogger("GlasscraftCTM");
+
     private static volatile TextureAtlasSprite cached;
     private static volatile boolean resolved;
+    private static int loggedErrors;
 
     private CleanGlassSprite() {}
 
@@ -26,13 +30,24 @@ public final class CleanGlassSprite {
                 Minecraft mc = Minecraft.getInstance();
                 TextureAtlas atlas = mc.getAtlasManager()
                     .getAtlasOrThrow(TextureAtlas.LOCATION_BLOCKS);
-                cached = atlas.getSprite(Identifier.fromNamespaceAndPath(
+                TextureAtlasSprite s = atlas.getSprite(Identifier.fromNamespaceAndPath(
                     "glasscraft", "block/clean_glass"));
-                resolved = cached != null;
+                // Sprite "missing" de vanilla: ficha magenta/blanca con u0==v0==0 y
+                // tamano igual al del atlas entero en algunos casos; detectarlo por
+                // nombre (missingno) para no usarlo por error.
+                if (s != null && !s.contents().name().getPath().contains("missingno")) {
+                    cached = s;
+                    resolved = true;
+                    LOGGER.info("[CLEAN] sprite resuelto: {}", s.contents().name());
+                } else if (s != null && loggedErrors < 3) {
+                    loggedErrors++;
+                    LOGGER.warn("[CLEAN] getSprite devolvio el sprite missing — clean_glass NO esta stitches en el atlas");
+                }
             } catch (Throwable t) {
-                // atlas aun no listo (inicio) — reintentar en la siguiente llamada
-                resolved = false;
-                cached = null;
+                if (loggedErrors < 3) {
+                    loggedErrors++;
+                    LOGGER.warn("[CLEAN] no se pudo resolver el sprite: {}", t.toString());
+                }
             }
             return cached;
         }
