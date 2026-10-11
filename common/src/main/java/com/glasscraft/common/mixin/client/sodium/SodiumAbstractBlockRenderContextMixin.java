@@ -1,7 +1,6 @@
 package com.glasscraft.common.mixin.client.sodium;
 
 import com.glasscraft.common.client.ctm.CtmContext;
-import com.glasscraft.common.client.ctm.CtmDebug;
 import com.glasscraft.common.client.ctm.CtmResolver;
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -51,9 +50,7 @@ abstract class SodiumAbstractBlockRenderContextMixin {
     @Inject(method = "renderQuad", at = @At("HEAD"), cancellable = true)
     private void glasscraft$shrinkSodiumQuad(MutableQuadViewImpl quad, CallbackInfo ci) {
         if (state == null || pos == null || level == null) return;
-        CtmDebug.beginCalls.incrementAndGet();
         if (!CtmResolver.isEnabled(state)) return;
-        CtmDebug.activeBlocks.incrementAndGet();
 
         CtmContext ctx = CtmContext.get();
         ctx.level = level;
@@ -62,21 +59,9 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         ctx.connectionMask = -1;
 
         int mask = ctx.mask();
-        CtmDebug.quadsTotal.incrementAndGet();
         if (mask == 0) return;
 
         Direction face = quad.getNominalFace();
-
-        // PDUMP3: ANTES de cualquier descarte — que quads de paneles llegan a renderQuad
-        if (CtmResolver.isVanillaPane(state) && CtmDebug.entryDumps.get() > 0) {
-            CtmDebug.entryDumps.decrementAndGet();
-            String sName;
-            try {
-                sName = (quad.cachedSprite() != null) ? quad.cachedSprite().contents().name().toString() : "NULL";
-            } catch (Throwable t) { sName = "EX:" + t.getClass().getSimpleName(); }
-            CtmDebug.LOGGER.info("[PDUMP3] ctx={} face={} cull={} sprite={}",
-                this.getClass().getSimpleName(), face, quad.getCullFace(), sName);
-        }
 
         if (face == null) {
             // NeoForge: el emisor de modelos entrega quads de panel SIN nominalFace
@@ -85,7 +70,6 @@ abstract class SodiumAbstractBlockRenderContextMixin {
             // vanilla FaceBakery.calculateFacing: normal del winding -> eje dominante.
             face = glasscraft$deriveFace(quad);
             if (face == null) return;
-            CtmDebug.derivedFaces.incrementAndGet();
         }
 
         boolean realPane = CtmResolver.isVanillaPane(state);
@@ -164,24 +148,6 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         float qvMin = Math.min(Math.min(v[0], v[1]), Math.min(v[2], v[3]));
         float qvMax = Math.max(Math.max(v[0], v[1]), Math.max(v[2], v[3]));
 
-        // DUMP dedicado a paneles (presupuesto propio: los cubos no se lo comen).
-        boolean doDump = false;
-        String spriteName = sprite.contents().name().toString();
-        int budget = CtmDebug.spriteDumpBudget(spriteName);
-        if (realPane && budget > 0) {
-            CtmDebug.spendSpriteDump(spriteName);
-            doDump = true;
-            CtmDebug.LOGGER.info("[PDUMP] face={} pane={} sprite={} uAx={} vAx={} mask={}",
-                face, realPane, spriteName,
-                uDir, vDir, Integer.toBinaryString(mask));
-            CtmDebug.LOGGER.info("[PDUMP]  tile u=[{}/{}] v=[{}/{}] quad u=[{}/{}] v=[{}/{}]",
-                f(u0), f(u1), f(v0), f(v1), f(quMin), f(quMax), f(qvMin), f(qvMax));
-            for (int i = 0; i < 4; i++) {
-                CtmDebug.LOGGER.info("[PDUMP]  v{} p=({},{},{}) uv=({},{})",
-                    i, f(p[i].x), f(p[i].y), f(p[i].z), f(u[i]), f(v[i]));
-            }
-        }
-
         float[] nu = new float[4], nv = new float[4];
         System.arraycopy(u, 0, nu, 0, 4);
         System.arraycopy(v, 0, nv, 0, 4);
@@ -209,20 +175,11 @@ abstract class SodiumAbstractBlockRenderContextMixin {
             }
             if (ch) changed = true;
         }
-        if (!changed) {
-            if (doDump) CtmDebug.LOGGER.info("[PDUMP]  -> SIN cambio");
-            return;
-        }
+        if (!changed) return;
         for (int i = 0; i < 4; i++) {
             quad.setUV(i, nu[i], nv[i]);
         }
         quad.setAmbientOcclusion(TriState.FALSE);
-        CtmDebug.quadsModified.incrementAndGet();
-        if (doDump) {
-            CtmDebug.LOGGER.info("[PDUMP]  -> CONTRAIDO uv=({},{}) ({},{}) ({},{}) ({},{})",
-                f(nu[0]), f(nv[0]), f(nu[1]), f(nv[1]), f(nu[2]), f(nv[2]), f(nu[3]), f(nv[3]));
-        }
-        CtmDebug.sample(realPane ? "pane" : "cube");
     }
 
     /**

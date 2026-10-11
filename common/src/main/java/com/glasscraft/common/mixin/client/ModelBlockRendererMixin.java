@@ -1,7 +1,6 @@
 package com.glasscraft.common.mixin.client;
 
 import com.glasscraft.common.client.ctm.CtmContext;
-import com.glasscraft.common.client.ctm.CtmDebug;
 import com.glasscraft.common.client.ctm.CtmResolver;
 import com.glasscraft.common.client.ctm.CtmUvShrink;
 import net.minecraft.client.renderer.block.BlockQuadOutput;
@@ -58,9 +57,7 @@ abstract class ModelBlockRendererMixin {
         if (quad.direction() == null) return quad; // quads internos/postes
         int mask = ctx.mask();
         if (mask == 0) return quad;
-        CtmDebug.quadsTotal.incrementAndGet();
         BakedQuad shrunk = CtmUvShrink.shrinkIfConnected(quad, quad.direction(), mask);
-        if (shrunk != quad) CtmDebug.quadsModified.incrementAndGet();
         return shrunk;
     }
 }
