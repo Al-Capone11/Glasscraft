@@ -141,12 +141,19 @@ abstract class SodiumAbstractBlockRenderContextMixin {
         if (sprite == null) return;
 
         // Override de sprite en bloques conectados: cristal limpio (vidrios,
-        // config cleanGlass) y linterna marina (config seaLantern — su borde
-        // de 2px sombreado aparece como linea en cada junta).
+        // config cleanGlass) y linterna marina (config seaLantern). Si la cara
+        // conecta por TODOS sus lados tangentes se usa la variante _flat (sin
+        // marco): el marco de 1px se promedia dentro del tile en los mips de
+        // distancia y reaparece como rejilla — flat es inmune a eso.
         if (CtmResolver.spriteOverrideActive(state)) {
             String blockPath = state.getBlock().builtInRegistryHolder().key()
                 .identifier().getPath();
-            TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath);
+            boolean flat = true;
+            for (Direction d : Direction.values()) {
+                if (d.getAxis() == nAx) continue;
+                if ((mask & (1 << d.ordinal())) == 0) { flat = false; break; }
+            }
+            TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath, flat);
             if (clean != null && clean != sprite) {
                 for (int i = 0; i < 4; i++) {
                     u[i] = clean.getU0() + (u[i] - sprite.getU0());

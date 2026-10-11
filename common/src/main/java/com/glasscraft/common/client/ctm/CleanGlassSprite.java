@@ -72,16 +72,23 @@ public final class CleanGlassSprite {
      * Sprite limpio para el path de un bloque vanilla (vidrios y linterna marina).
      * Devuelve null si el path no tiene variante o la resolucion fallo.
      */
-    public static TextureAtlasSprite getFor(String blockPath) {
+    /**
+     * Sprite limpio para el path de un bloque vanilla.
+     * flat=true (la cara conecta por TODOS sus lados tangentes): variante sin marco
+     * — inmune a la rejilla de mipmaps a distancia (el marco de 1px del sprite con
+     * marco se promedia en mips superiores y reaparece como lineas).
+     * flat=false: variante con marco (los limites del grupo conservan contorno).
+     * Devuelve null si el path no tiene variante o la resolucion fallo.
+     */
+    public static TextureAtlasSprite getFor(String blockPath, boolean flat) {
         String spritePath = PATH_MAP.get(blockPath);
         if (spritePath == null) return null;
+        if (flat) spritePath = spritePath + "_flat";
         TextureAtlasSprite hit = CACHE.get(spritePath);
         if (hit != null) return hit;
         if (Boolean.TRUE.equals(FAILED.get(spritePath))) return null;
         try {
             Minecraft mc = Minecraft.getInstance();
-            // Clave del AtlasManager = ID de DEFINICION del atlas (AtlasIds.BLOCKS),
-            // no la textura (LOCATION_BLOCKS) — esta ultima lanza IllegalArgumentException.
             TextureAtlas atlas = mc.getAtlasManager()
                 .getAtlasOrThrow(net.minecraft.data.AtlasIds.BLOCKS);
             TextureAtlasSprite s = atlas.getSprite(Identifier.fromNamespaceAndPath(
@@ -92,19 +99,19 @@ public final class CleanGlassSprite {
             }
             if (loggedErrors < 3) {
                 loggedErrors++;
-                LOGGER.warn("[CLEAN] sprite missing para {}: {}", blockPath, spritePath);
+                LOGGER.warn("[CLEAN] sprite missing for {}: {}", blockPath, spritePath);
             }
             FAILED.put(spritePath, Boolean.TRUE);
         } catch (Throwable t) {
             if (loggedErrors < 3) {
                 loggedErrors++;
-                LOGGER.warn("[CLEAN] error resolviendo {}: {}", blockPath, t.toString());
+                LOGGER.warn("[CLEAN] error resolving {}: {}", blockPath, t.toString());
             }
         }
         return null;
     }
 
-    /** Invalidar tras un reload de recursos. */
+/** Invalidar tras un reload de recursos. */
     public static void invalidate() {
         CACHE.clear();
         FAILED.clear();
