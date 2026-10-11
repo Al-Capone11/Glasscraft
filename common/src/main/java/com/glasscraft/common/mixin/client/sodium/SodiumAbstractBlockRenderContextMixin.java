@@ -167,6 +167,13 @@ abstract class SodiumAbstractBlockRenderContextMixin {
                     quad.setUV(i, u[i], v[i]);
                 }
                 sprite = clean;
+                // El sprite per-side YA es seamless en sus lados conectados (el lado
+                // conectado es plano hasta el borde). Aplicar el shrink de 1px encima
+                // hace que la junta muestre la columna 14 (el radial, L~112..207 en
+                // la linterna) en vez del borde plano -> reaparece la linea. Con
+                // override NO se contrae: el sprite hace el trabajo del shrink.
+                quad.setAmbientOcclusion(TriState.FALSE);
+                return;
             }
         }
 

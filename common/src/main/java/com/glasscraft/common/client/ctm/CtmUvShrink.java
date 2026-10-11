@@ -65,6 +65,10 @@ public final class CtmUvShrink {
                 quad = new BakedQuad(quad.position0(), quad.position1(), quad.position2(), quad.position3(),
                     packed[0], packed[1], packed[2], packed[3], quad.direction(), info);
                 sprite = clean;
+                // El sprite per-side ya es seamless en sus lados conectados; el shrink
+                // de 1px encima muestrearía el interior (radial) en vez del borde plano
+                // y la línea reaparecería. Con override: sin contracción adicional.
+                return quad;
             }
         }
 
