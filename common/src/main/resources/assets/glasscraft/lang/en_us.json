@@ -10,5 +10,6 @@
   "glasscraft.config.glowstone": "Glowstone",
   "item.glasscraft.glasscutter_head": "Glasscutter Head",
   "itemGroup.glasscraft": "Glasscraft",
-  "glasscraft.config.clean_glass": "Clean glass"
+  "glasscraft.config.clean_glass": "Clean glass",
+  "glasscraft.config.sea_lantern": "Sea lantern"
 }

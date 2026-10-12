@@ -10,5 +10,6 @@
   "glasscraft.config.glowstone": "Piedra luminosa",
   "item.glasscraft.glasscutter_head": "Cabezal de cortavidrios",
   "itemGroup.glasscraft": "Glasscraft",
-  "glasscraft.config.clean_glass": "Cristal limpio"
+  "glasscraft.config.clean_glass": "Cristal limpio",
+  "glasscraft.config.sea_lantern": "Lampara marina"
 }
