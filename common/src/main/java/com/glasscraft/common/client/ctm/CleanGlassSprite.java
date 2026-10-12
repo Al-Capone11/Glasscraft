@@ -59,7 +59,8 @@ public final class CleanGlassSprite {
         Map.entry("green_stained_glass_pane", "clean_green_stained_glass"),
         Map.entry("red_stained_glass_pane", "clean_red_stained_glass"),
         Map.entry("black_stained_glass_pane", "clean_black_stained_glass"),
-        Map.entry("sea_lantern", "clean_sea_lantern")
+        // linterna: variantes CON esquinas (lados x diagonales) — path base
+        Map.entry("sea_lantern", "clean_sea_lantern_c")
     );
 
     private static final Map<String, TextureAtlasSprite> CACHE = new ConcurrentHashMap<>();
@@ -89,9 +90,23 @@ public final class CleanGlassSprite {
      * Devuelve null si el path no tiene variante o la resolucion fallo.
      */
     public static TextureAtlasSprite getFor(String blockPath, int faceMask) {
+        return getFor(blockPath, faceMask, 0);
+    }
+
+    /**
+     * Sprite limpio con esquinas: faceMask (N=1,E=2,S=4,W=8) y cornerMask
+     * (NW=1,NE=2,SW=4,SE=8). Solo la linterna usa cornerMask (sprites
+     * clean_sea_lantern_{mask}c{corners}); el resto ignora corners y usa
+     * clean_{tipo}_{mask} como hasta ahora.
+     */
+    public static TextureAtlasSprite getFor(String blockPath, int faceMask, int cornerMask) {
         String spritePath = PATH_MAP.get(blockPath);
         if (spritePath == null) return null;
-        spritePath = spritePath + "_" + (faceMask & 0xF);
+        if (spritePath.endsWith("_c")) {
+            spritePath = spritePath + faceMask + "c" + cornerMask;
+        } else {
+            spritePath = spritePath + "_" + (faceMask & 0xF);
+        }
         TextureAtlasSprite hit = CACHE.get(spritePath);
         if (hit != null) return hit;
         if (Boolean.TRUE.equals(FAILED.get(spritePath))) return null;

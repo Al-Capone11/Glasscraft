@@ -149,6 +149,7 @@ abstract class SodiumAbstractBlockRenderContextMixin {
             String blockPath = state.getBlock().builtInRegistryHolder().key()
                 .identifier().getPath();
             int faceMask = 0;
+            int cornerMask = 0;
             if (uDir != null && vDir != null) {
                 // Convencion verificada en dumps reales (ronda 12): el vertice con
                 // v MENOR (v0 del tile, borde superior de la textura) esta ARRIBA en
@@ -158,8 +159,14 @@ abstract class SodiumAbstractBlockRenderContextMixin {
                 if ((mask & (1 << vDir.ordinal())) != 0) faceMask |= 4;              // S
                 if ((mask & (1 << uDir.ordinal())) != 0) faceMask |= 2;              // E
                 if ((mask & (1 << uDir.getOpposite().ordinal())) != 0) faceMask |= 8; // W
+                // Esquinas: N del tile = -vDir, W del tile = -uDir. Solo linternas
+                // (sprites con diagonal); los vidrios siguen con getFor(path, mask).
+                if (blockPath.equals("sea_lantern")) {
+                    cornerMask = CtmResolver.cornerMask(state, pos, level,
+                        vDir.getOpposite(), uDir.getOpposite());
+                }
             }
-            TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath, faceMask);
+            TextureAtlasSprite clean = CleanGlassSprite.getFor(blockPath, faceMask, cornerMask);
             if (clean != null && clean != sprite) {
                 for (int i = 0; i < 4; i++) {
                     u[i] = clean.getU0() + (u[i] - sprite.getU0());

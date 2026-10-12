@@ -103,6 +103,32 @@ public final class CtmResolver {
         return neighbor.getBlock() == self.getBlock() && isEnabled(neighbor);
     }
 
+    /** ¿El vecino DIAGONAL (en el plano de una cara) conecta? Para esquinas CTM. */
+    public static boolean diagonalConnects(BlockState self, BlockPos diagPos,
+                                           net.minecraft.world.level.BlockGetter level) {
+        BlockState n = level.getBlockState(diagPos);
+        return n.getBlock() == self.getBlock() && isEnabled(n);
+    }
+
+    /**
+     * Mascara de esquinas de la cara (bits NW=1, NE=2, SW=4, SE=8 en el marco
+     * del tile). nDir = direccion "arriba" de la cara en el mundo, wDir = "izquierda".
+     * Diagonal libre -> el sprite dibuja el arco redondeado vanilla (como el
+     * bloque suelto); diagonal conectada -> continuacion plana del interior.
+     * Es la pieza que el CTM de 4 lados no tenia: sin ella, la cruz pierde sus
+     * esquinas y el contorno del grupo queda rectangular.
+     */
+    public static int cornerMask(BlockState state, BlockPos pos,
+                                 net.minecraft.world.level.BlockGetter level,
+                                 Direction nDir, Direction wDir) {
+        int m = 0;
+        if (diagonalConnects(state, pos.relative(nDir).relative(wDir), level)) m |= 1;              // NW
+        if (diagonalConnects(state, pos.relative(nDir).relative(wDir.getOpposite()), level)) m |= 2;   // NE
+        if (diagonalConnects(state, pos.relative(nDir.getOpposite()).relative(wDir), level)) m |= 4;    // SW
+        if (diagonalConnects(state, pos.relative(nDir.getOpposite()).relative(wDir.getOpposite()), level)) m |= 8; // SE
+        return m;
+    }
+
     /**
      * Mascara de 6 bits de vecinos que conectan (bit i = Direction.values()[i]).
      */
