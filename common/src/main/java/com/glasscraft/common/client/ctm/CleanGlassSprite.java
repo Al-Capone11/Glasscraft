@@ -103,7 +103,10 @@ public final class CleanGlassSprite {
         String spritePath = PATH_MAP.get(blockPath);
         if (spritePath == null) return null;
         if (spritePath.endsWith("_c")) {
-            spritePath = spritePath + faceMask + "c" + cornerMask;
+            // "clean_sea_lantern_c" -> "clean_sea_lantern_{mask}c{corners}"
+            // (el marcador _c se quita: los archivos son _{mask}c{corners})
+            spritePath = spritePath.substring(0, spritePath.length() - 2)
+                + "_" + (faceMask & 0xF) + "c" + (cornerMask & 0xF);
         } else {
             spritePath = spritePath + "_" + (faceMask & 0xF);
         }
