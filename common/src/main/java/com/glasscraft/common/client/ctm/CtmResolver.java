@@ -37,7 +37,7 @@ public final class CtmResolver {
                 case "glassPanes" -> c.glassPanes;
                 case "tintedGlass" -> c.tintedGlass;
                 case "glowstone" -> c.glowstone;
-                case "seaLantern" -> c.seaLantern;
+                case "seaLantern" -> false; // radial no conectable sin artefactos: vanilla exacto
                 default -> false;
             };
         }
@@ -69,10 +69,6 @@ public final class CtmResolver {
      */
     public static boolean spriteOverrideActive(BlockState state) {
         Identifier id = state.getBlock().builtInRegistryHolder().key().identifier();
-        if ("minecraft".equals(id.getNamespace()) && "sea_lantern".equals(id.getPath())) {
-            return Glasscraft.config().continuity.enabled
-                && Glasscraft.config().continuity.seaLantern;
-        }
         return Glasscraft.config().continuity.cleanGlass
             && isVanillaGlassLike(state, id);
     }

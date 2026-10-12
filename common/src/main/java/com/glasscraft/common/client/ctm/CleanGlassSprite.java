@@ -58,8 +58,7 @@ public final class CleanGlassSprite {
         Map.entry("brown_stained_glass_pane", "clean_brown_stained_glass"),
         Map.entry("green_stained_glass_pane", "clean_green_stained_glass"),
         Map.entry("red_stained_glass_pane", "clean_red_stained_glass"),
-        Map.entry("black_stained_glass_pane", "clean_black_stained_glass"),
-        Map.entry("sea_lantern", "clean_sea_lantern")
+        Map.entry("black_stained_glass_pane", "clean_black_stained_glass")
     );
 
     private static final Map<String, TextureAtlasSprite> CACHE = new ConcurrentHashMap<>();
