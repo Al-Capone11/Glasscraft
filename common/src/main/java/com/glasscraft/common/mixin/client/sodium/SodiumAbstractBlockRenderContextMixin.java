@@ -159,9 +159,9 @@ abstract class SodiumAbstractBlockRenderContextMixin {
                 if ((mask & (1 << vDir.ordinal())) != 0) faceMask |= 4;              // S
                 if ((mask & (1 << uDir.ordinal())) != 0) faceMask |= 2;              // E
                 if ((mask & (1 << uDir.getOpposite().ordinal())) != 0) faceMask |= 8; // W
-                // Esquinas: N del tile = -vDir, W del tile = -uDir. Solo linternas
-                // (sprites con diagonal); los vidrios siguen con getFor(path, mask).
-                if (blockPath.equals("sea_lantern")) {
+                // Esquinas: N del tile = -vDir, W del tile = -uDir. Linternas y
+                // bloques de vidrio (paneles no — tiras sub-tile).
+                if (CleanGlassSprite.usesCorners(blockPath)) {
                     cornerMask = CtmResolver.cornerMask(state, pos, level,
                         vDir.getOpposite(), uDir.getOpposite());
                 }

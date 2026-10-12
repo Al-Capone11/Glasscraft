@@ -52,7 +52,7 @@ public final class CtmUvShrink {
             if (down) faceMask |= 4;
             if (left) faceMask |= 8;
             int cornerMask = 0;
-            if (blockPath.equals("sea_lantern")) {
+            if (CleanGlassSprite.usesCorners(blockPath)) {
                 // N del tile = up del plano, W del tile = left del plano.
                 // pos/level vienen del CtmContext (thread-local del tesselado).
                 CtmContext ctx = CtmContext.get();

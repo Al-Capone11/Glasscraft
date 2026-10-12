@@ -59,8 +59,7 @@ public final class CleanGlassSprite {
         Map.entry("green_stained_glass_pane", "clean_green_stained_glass"),
         Map.entry("red_stained_glass_pane", "clean_red_stained_glass"),
         Map.entry("black_stained_glass_pane", "clean_black_stained_glass"),
-        // linterna: variantes CON esquinas (lados x diagonales) — path base
-        Map.entry("sea_lantern", "clean_sea_lantern_c")
+        Map.entry("sea_lantern", "clean_sea_lantern")
     );
 
     private static final Map<String, TextureAtlasSprite> CACHE = new ConcurrentHashMap<>();
@@ -94,22 +93,25 @@ public final class CleanGlassSprite {
     }
 
     /**
+     * ¿Esta familia de sprites tiene variantes por esquina (diagonales)?
+     * Linternas y BLOQUES de vidrio (los paneles no: sus caras de brazo son
+     * tiras sub-tile y las diagonales no aplican).
+     */
+    public static boolean usesCorners(String blockPath) {
+        return blockPath.equals("sea_lantern") || blockPath.equals("glass")
+            || blockPath.equals("tinted_glass") || blockPath.endsWith("_stained_glass");
+    }
+
+    /**
      * Sprite limpio con esquinas: faceMask (N=1,E=2,S=4,W=8) y cornerMask
-     * (NW=1,NE=2,SW=4,SE=8). Solo la linterna usa cornerMask (sprites
-     * clean_sea_lantern_{mask}c{corners}); el resto ignora corners y usa
-     * clean_{tipo}_{mask} como hasta ahora.
+     * (NW=1,NE=2,SW=4,SE=8). TODAS las familias usan sprites _{mask}c{corners}:
+     * diagonal libre en una esquina de lados conectados -> el pixel de esquina
+     * del marco reaparece (bloques en cruz); diagonal conectada -> continuacion.
      */
     public static TextureAtlasSprite getFor(String blockPath, int faceMask, int cornerMask) {
         String spritePath = PATH_MAP.get(blockPath);
         if (spritePath == null) return null;
-        if (spritePath.endsWith("_c")) {
-            // "clean_sea_lantern_c" -> "clean_sea_lantern_{mask}c{corners}"
-            // (el marcador _c se quita: los archivos son _{mask}c{corners})
-            spritePath = spritePath.substring(0, spritePath.length() - 2)
-                + "_" + (faceMask & 0xF) + "c" + (cornerMask & 0xF);
-        } else {
-            spritePath = spritePath + "_" + (faceMask & 0xF);
-        }
+        spritePath = spritePath + "_" + (faceMask & 0xF) + "c" + (cornerMask & 0xF);
         TextureAtlasSprite hit = CACHE.get(spritePath);
         if (hit != null) return hit;
         if (Boolean.TRUE.equals(FAILED.get(spritePath))) return null;
