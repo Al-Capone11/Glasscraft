@@ -1,0 +1,16 @@
+.gradle/
+build/
+run/
+*.launch
+.idea/
+.vscode/
+eclipse/
+bin/
+*.iml
+common/libs/
+
+# Project assets that don't belong in the repo (logo lives in assets/glasscraft/icon.png)
+Logo.png
+
+# Internal session notes
+docs/

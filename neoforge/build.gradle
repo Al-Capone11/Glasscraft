@@ -1,0 +1,76 @@
+plugins {
+    id 'net.neoforged.moddev'
+    id 'java-library'
+}
+
+base {
+    archivesName = "glasscraft-neoforge"
+}
+
+neoForge {
+    version = project.neoforge_version
+
+    mods {
+        "glasscraft" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+repositories {
+    // Modrinth maven para Jade (opcional, compileOnly)
+    maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' }
+    // Sodium classes (mismo maven local flat que common)
+    flatDir { name = 'LocalMods'; dirs '../common/libs' }
+}
+
+dependencies {
+    implementation project(':core')
+    compileOnly project(':common')
+
+    // Opcional: compilar contra Jade neoforge, nunca bundling
+    compileOnly "maven.modrinth:jade:26.2.10+neoforge"
+    // Sodium classes para el hook CTM (el source de common se recompila aqui)
+    compileOnly ':sodium-api-classes@jar'
+}
+
+// Inyectar codigo common+core en el JAR neoforge.
+tasks.named('compileJava', JavaCompile) {
+    source(project(':common').sourceSets.main.allSource)
+}
+tasks.named('processResources', ProcessResources) {
+    from project(':common').sourceSets.main.resources
+
+    def props = [
+        mod_id                 : project.mod_id,
+        mod_name               : project.mod_name,
+        mod_version            : project.mod_version,
+        mod_authors            : project.mod_authors,
+        mod_license            : project.mod_license,
+        mod_description        : project.mod_description,
+        minecraft_version      : project.minecraft_version,
+        minecraft_version_range: project.minecraft_version_range,
+        neoforge_version       : project.neoforge_version
+    ]
+    inputs.properties props
+    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
+        expand props
+    }
+}
+tasks.named('sourcesJar', Jar) {
+    from project(':common').sourceSets.main.allSource
+    from project(':core').sourceSets.main.allSource
+}
+tasks.named('jar', Jar) {
+    from project(':core').sourceSets.main.output
+
+    manifest {
+        attributes([
+            'Specification-Title'   : project.mod_name,
+            'Specification-Version' : project.mod_version,
+            'Implementation-Title'  : project.name,
+            'Implementation-Version': "${project.mod_version}",
+            'Implementation-Vendor' : project.mod_authors
+        ])
+    }
+}

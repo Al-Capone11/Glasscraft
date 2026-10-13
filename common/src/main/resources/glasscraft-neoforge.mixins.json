@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.glasscraft.common.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "refmap": "glasscraft.refmap.json",
+  "mixins": [
+    "ItemStackMixin",
+    "ItemStackMixinNeoForge",
+    "BlockDropResourcesMixin"
+  ],
+  "client": [
+    "client.ModelBlockRendererMixin"
+  ],
+  "injectors": {
+    "defaultInjectorRequireValue": 1
+  }
+}

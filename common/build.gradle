@@ -1,0 +1,42 @@
+plugins {
+    id 'net.fabricmc.fabric-loom'
+    id 'java-library'
+}
+
+// common compila contra Minecraft vanilla 26.2 + loader. NO toca APIs de loader.
+repositories {
+    // Modrinth maven para la API de Jade (compileOnly)
+    maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' }
+    // Jars reales de Sodium (copiados de las instancias) — maven local flat
+    flatDir { name = 'LocalMods'; dirs 'libs' }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
+    implementation project(':core')
+
+    // fastutil (en runtime de MC, necesario para compilar common)
+    compileOnly 'it.unimi.dsi:fastutil:8.5.13'
+
+    // Jade API para el plugin de harvest (compileOnly; runtime solo si el
+    // usuario instala Jade). Solo lo usan las clases de compat.
+    compileOnly "maven.modrinth:jade:26.2.10+fabric"
+
+    // Sodium 0.9.2 (jar real de la instancia, en common/libs como maven local)
+    // para el hook CTM del pipeline de terreno de Sodium. compileOnly — el
+    // plugin de mixin lo activa solo si Sodium esta presente en runtime.
+    compileOnly ':sodium-api-classes@jar'
+
+    // SLF4J para el logger (proporcionado por loader en runtime)
+    compileOnly 'org.slf4j:slf4j-api:2.0.16'
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/glasscraft.accesswidener")
+    mods {
+        "glasscraft-common" {
+            sourceSet sourceSets.main
+        }
+    }
+}

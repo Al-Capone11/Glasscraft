@@ -1,0 +1,15 @@
+{
+  "item.glasscraft.glasscutter": "Cortavidrios",
+  "item.glasscraft.glasscutter.broken": "Roto - repara con hierro en el yunque",
+  "item.glasscraft.glasscutter.repair_hint": "Corta vidrio, paneles, piedra luminosa y prismarina sin que se pierdan",
+  "glasscraft.config.title": "Opciones de Glasscraft",
+  "glasscraft.config.continuity_enabled": "Texturas conectadas",
+  "glasscraft.config.vanilla_glass": "Vidrio vanilla",
+  "glasscraft.config.glass_panes": "Paneles de vidrio",
+  "glasscraft.config.tinted_glass": "Vidrio tintado",
+  "glasscraft.config.glowstone": "Piedra luminosa",
+  "item.glasscraft.glasscutter_head": "Cabezal de cortavidrios",
+  "itemGroup.glasscraft": "Glasscraft",
+  "glasscraft.config.clean_glass": "Cristal limpio",
+  "glasscraft.config.sea_lantern": "Lampara marina"
+}
