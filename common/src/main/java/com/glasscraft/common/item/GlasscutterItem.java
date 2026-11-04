@@ -1,9 +1,7 @@
 package com.glasscraft.common.item;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 
@@ -14,52 +12,14 @@ import java.util.function.Consumer;
  * unica pieza de logica propia: cuando isBroken() (durabilidad agotada,
  * gracias al mixin applyDamage que evita el shrink) NO rompe nada —
  * velocidad 0 y sin drops correctos. Se repara en yunque con hierro.
+ *
+ * Extiende GlasscraftHeldItem, que aporta la compatibilidad de pose en mano
+ * con Locomotion (ver su javadoc).
  */
-public class GlasscutterItem extends Item {
+public class GlasscutterItem extends GlasscraftHeldItem {
 
     public GlasscutterItem(Properties properties) {
         super(properties);
-    }
-
-    /**
-     * Compatibilidad de primera persona con Locomotion.
-     *
-     * Locomotion elige la pose de la mano evaluando predicados sobre el
-     * ItemStack (FirstPersonHandPoses.testForNextHandPose, ordenados por
-     * prioridad). Los predicados de herramienta son tags vanilla
-     * (#minecraft:pickaxes y compañia), que NO podemos usar: meter el
-     * Glasscutter ahi le daria comportamientos vanilla que no son suyos
-     * (romper macetas decoradas, encantamientos de mineria, Silk Touch).
-     *
-     * Pero hay un predicado que SI controlamos desde nuestro propio item: la
-     * animacion de uso. Locomotion mapea getUseAnimation()==SPEAR a su pose
-     * SPEAR (prioridad 100 > 0 del GENERIC_ITEM por defecto), y esa pose
-     * renderiza el item con ItemRenderType.THIRD_PERSON_ITEM, es decir
-     * ItemDisplayContext.THIRD_PERSON_RIGHT_HAND — el contexto "en la mano",
-     * que si controlamos con thirdperson_righthand. Sin el, caia en
-     * FIXED_ITEM -> ON_SHELF, un contexto pensado para exponer el item en
-     * una estanteria, y por eso la herramienta se veia flotando sobre la mano.
-     *
-     * Sin Locomotion esta animacion nunca se usa (el item no tiene duracion
-     * de uso, asi que nunca entra en estado "usando"), de modo que el render
-     * vanilla no cambia: el override solo actua cuando el mod esta presente.
-     */
-    private static final boolean LOCOMOTION_PRESENT = detectLocomotion();
-
-    private static boolean detectLocomotion() {
-        try {
-            Class.forName("com.trainguy9512.locomotion.LocomotionMain", false,
-                GlasscutterItem.class.getClassLoader());
-            return true;
-        } catch (Throwable ignored) {
-            return false;
-        }
-    }
-
-    @Override
-    public ItemUseAnimation getUseAnimation(ItemStack stack) {
-        // Ver LOCOMOTION_PRESENT arriba: solo para la pose de mano de Locomotion.
-        return LOCOMOTION_PRESENT ? ItemUseAnimation.SPEAR : super.getUseAnimation(stack);
     }
 
     @Override

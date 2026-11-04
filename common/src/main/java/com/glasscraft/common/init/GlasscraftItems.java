@@ -1,6 +1,7 @@
 package com.glasscraft.common.init;
 
 import com.glasscraft.common.Glasscraft;
+import com.glasscraft.common.item.GlasscraftHeldItem;
 import com.glasscraft.common.item.GlasscutterItem;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderSet;
@@ -54,7 +55,9 @@ public final class GlasscraftItems {
         net.minecraft.core.Registry.register(BuiltInRegistries.ITEM, GLASSCUTTER_KEY, item);
         bind(() -> item);
 
-        Item head = new Item(buildHeadProperties());
+        // GlasscraftHeldItem (no Item pelado): la cabeza tambien se sostiene en
+        // la mano y necesita la pose de Locomotion, igual que el Glasscutter.
+        Item head = new GlasscraftHeldItem(buildHeadProperties());
         net.minecraft.core.Registry.register(BuiltInRegistries.ITEM, GLASSCUTTER_HEAD_KEY, head);
         bindHead(() -> head);
     }
@@ -65,7 +68,7 @@ public final class GlasscraftItems {
     }
 
     public static Item buildHeadForDeferred() {
-        return new Item(buildHeadProperties());
+        return new GlasscraftHeldItem(buildHeadProperties());
     }
 
     /** Establece el supplier del item ya registrado (desde cualquier loader). */
