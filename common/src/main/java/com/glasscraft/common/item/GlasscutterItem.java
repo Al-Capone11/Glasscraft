@@ -1,6 +1,7 @@
 package com.glasscraft.common.item;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
@@ -13,10 +14,17 @@ import java.util.function.Consumer;
  * gracias al mixin applyDamage que evita el shrink) NO rompe nada —
  * velocidad 0 y sin drops correctos. Se repara en yunque con hierro.
  *
- * Extiende GlasscraftHeldItem, que aporta la compatibilidad de pose en mano
- * con Locomotion (ver su javadoc).
+ * La pose en mano con Locomotion NO se resuelve aca: este item esta en el tag
+ * vanilla #minecraft:pickaxes (ver data/minecraft/tags/item/pickaxes.json), y
+ * por eso Locomotion le da la misma pose de herramienta que a un pico (agarre
+ * + animacion de minado, mano a escala normal). Ese tag es tambien la razon
+ * por la que NO debe volver a activarse el override de getUseAnimation: la
+ * pose SPEAR tiene prioridad 100 y le ganaria a la de pico (60).
+ *
+ * GlasscraftHeldItem (el override de getUseAnimation) queda para los items
+ * que NO pueden estar en ese tag, como la cabeza.
  */
-public class GlasscutterItem extends GlasscraftHeldItem {
+public class GlasscutterItem extends Item {
 
     public GlasscutterItem(Properties properties) {
         super(properties);
