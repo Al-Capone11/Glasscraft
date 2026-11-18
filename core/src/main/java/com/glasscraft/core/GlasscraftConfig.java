@@ -60,6 +60,23 @@ public final class GlasscraftConfig {
             return enabled;
         }
 
+        /**
+         * Resuelve la continuidad VISUAL de un bloque de otro mod. A diferencia
+         * de resolves(), un namespace sin regla explicita queda DESACTIVADO:
+         * contraer UV de texturas no diseñadas para CTM puede deformarlas.
+         * La prioridad no cambia: denylist > allowlist > byMod. El interruptor
+         * general enabled se evalua aparte, en CtmResolver.isEnabled().
+         * Esta resolucion no se usa para drops ni otras mecanicas.
+         */
+        public boolean resolvesCtm(String namespace, String path) {
+            String id = namespace + ":" + path;
+            if (blockDenylist.contains(id)) return false;
+            if (blockAllowlist.contains(id)) return true;
+            Boolean byModFlag = byMod.get(namespace);
+            if (byModFlag != null) return byModFlag;
+            return false;
+        }
+
         /** Resuelve para un bloque vanilla (solo path, namespace minecraft). */
         public boolean resolvesVanilla(String path) {
             if (blockDenylist.contains("minecraft:" + path)) return false;
