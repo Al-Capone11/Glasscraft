@@ -109,6 +109,11 @@ public final class CleanGlassSprite {
      * del marco reaparece (bloques en cruz); diagonal conectada -> continuacion.
      */
     public static TextureAtlasSprite getFor(String blockPath, int faceMask, int cornerMask) {
+        // Linterna: solo existen variantes con al menos un lado conectado
+        // (mascaras 1..15). Un vecino unicamente en el eje normal de la cara
+        // deja faceMask=0 y no modifica ese tile: conservar el sprite vanilla
+        // en vez de pedir clean_sea_lantern_0c0, que no existe.
+        if ("sea_lantern".equals(blockPath) && (faceMask & 0xF) == 0) return null;
         String spritePath = PATH_MAP.get(blockPath);
         if (spritePath == null) return null;
         spritePath = spritePath + "_" + (faceMask & 0xF) + "c" + (cornerMask & 0xF);

@@ -24,6 +24,13 @@ In-game config screen via **Mod Menu** (Fabric) or the mods list (NeoForge):
 toggle the whole continuity system, per-material (glass, panes, glowstone, sea
 lantern) and per-installed-mod.
 
+CTM for other mods is **opt-in**: unlisted mods and blocks are left untouched
+so their textures are not deformed. Enable a whole namespace with
+`continuity.byMod: { "modid": true }`, or individual blocks with
+`continuity.blockAllowlist: [ "modid:block" ]`. `blockDenylist` takes priority
+over the allowlist, and the allowlist takes priority over `byMod`. Explicit
+mod rules and block lists keep working; vanilla materials are unchanged.
+
 ## Installation
 
 Grab the jar for your loader from [Releases](../../releases) and drop it in your

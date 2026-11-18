@@ -41,8 +41,9 @@ public final class CtmResolver {
                 default -> false;
             };
         }
-        // Bloques de mods (Chisel Reborn / Rechiseled / etc.): por namespace.
-        return c.resolves(namespace, path);
+        // Bloques de mods: opt-in. Un namespace sin regla no recibe CTM, para
+        // no deformar texturas de terceros no diseñadas para este sistema.
+        return c.resolvesCtm(namespace, path);
     }
 
     /**
