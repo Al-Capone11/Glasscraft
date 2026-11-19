@@ -13,6 +13,16 @@ import java.util.function.Consumer;
  * unica pieza de logica propia: cuando isBroken() (durabilidad agotada,
  * gracias al mixin applyDamage que evita el shrink) NO rompe nada —
  * velocidad 0 y sin drops correctos. Se repara en yunque con hierro.
+ *
+ * La pose en mano con Locomotion NO se resuelve aca: este item esta en el tag
+ * vanilla #minecraft:pickaxes (ver data/minecraft/tags/item/pickaxes.json), y
+ * por eso Locomotion le da la misma pose de herramienta que a un pico (agarre
+ * + animacion de minado, mano a escala normal). Ese tag es tambien la razon
+ * por la que NO debe volver a activarse el override de getUseAnimation: la
+ * pose SPEAR tiene prioridad 100 y le ganaria a la de pico (60).
+ *
+ * GlasscraftHeldItem (el override de getUseAnimation) queda para los items
+ * que NO pueden estar en ese tag, como la cabeza.
  */
 public class GlasscutterItem extends Item {
 
