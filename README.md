@@ -34,7 +34,4 @@ mod rules and block lists keep working; vanilla materials are unchanged.
 
 optional integrations.
 
-## Branches
 
-- `main` — published releases
-- `mc/26.2` — development line for Minecraft 26.2
