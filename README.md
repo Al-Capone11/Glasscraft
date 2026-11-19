@@ -31,10 +31,7 @@ so their textures are not deformed. Enable a whole namespace with
 over the allowlist, and the allowlist takes priority over `byMod`. Explicit
 mod rules and block lists keep working; vanilla materials are unchanged.
 
-## Installation
 
-Grab the jar for your loader from [Releases](../../releases) and drop it in your
-`mods` folder. Fabric requires the Fabric API; Mod Menu, Jade and Sodium are
 optional integrations.
 
 ## Branches
